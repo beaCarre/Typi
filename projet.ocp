@@ -11,25 +11,14 @@ begin
   end
 end
 
-begin library "typi" 
-
-end
-
-begin library "typi_js" 
-      sort = true 
-      has_asm = false
-      files = [
-            "jstool.ml"
-      ]
-      syntax = [ "js_of_ocaml.camlp4-syntax"]
-      requires = ["lib_aaga" "js_of_ocaml" "js_of_ocaml.camlp4-syntax"]
-end
-
 begin program "typi_js"
       sort = true
       has_asm = false
-      files = ["main.ml"]
+      files = [
+      	    "jstool.ml"
+      	    "main_js.ml"
+      ]
 
       syntax = [ "js_of_ocaml.camlp4-syntax"]
-      requires = ["lib_aaga_js" "js_of_ocaml" "js_of_ocaml.camlp4-syntax"]
+      requires = ["js_of_ocaml" "js_of_ocaml.camlp4-syntax"]
 end
