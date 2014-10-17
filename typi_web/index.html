@@ -1,9 +1,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Typi</title>
-    
     <link type="text/css" href="style.css" rel="stylesheet">
     <link type="text/css" href="bootstrap.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="typi_logo.jpg" />
     <script type="text/javascript" src="typi_js.js"></script>
     </head>
     <body>
@@ -11,15 +11,18 @@
     <div class="container">
       <div class="row">
        <div class="span7">
-          <h1 id="main-title">Typi</h1>
-          <p id="short-intro">
-	    Application Web de typage d’un mini-ML fonctionnel et impératif. (Juste un typeur lamdba... Typi, yeah pretty indeed).
-	  </p>
-          <table class="zebra-striped">
-            <thead><tr><th id="text-commands">Commands</th><th id="text-effects">Effects</th></tr></thead>
-            <tbody><tr><td id="text-enter">Enter / Return</td> <td id="text-submit">Submit code</td></tr>
-            <tr><td id="text-arrows">Up / Down</td><td id="text-history">Cycle through history</td></tr>
-            <tr><td id="text-newline">Shift + Enter</td><td id="text-multiline">Multiline edition</td></tr>
+         <div id="logo">
+	   <img src="typi_logo.jpg" width="80" height="90" style="display:inline;"/>
+	 </div> 
+	 <h1 id="main-title">Typi</h1>
+         <p id="short-intro">
+	   Application Web de typage d’un mini-ML fonctionnel et impératif. (Juste un typeur lamdba... Typi, yeah pretty indeed).
+	 </p>
+         <table class="zebra-striped">
+           <thead><tr><th id="text-commands">Commands</th><th id="text-effects">Effects</th></tr></thead>
+           <tbody><tr><td id="text-enter">Enter / Return</td> <td id="text-submit">Submit code</td></tr>
+             <tr><td id="text-arrows">Up / Down</td><td id="text-history">Cycle through history</td></tr>
+             <tr><td id="text-newline">Shift + Enter</td><td id="text-multiline">Multiline edition</td></tr>
           </tbody></table>
        </div>
         <div class="span9 ocaml">
@@ -29,7 +32,7 @@
 	      Hi, what type of Type do you like?
 	    </pre>
             <div id="sharp">#</div>
-            <div id="toplevel"><textarea id="console" style="width: 560px;height:400px;"></textarea></div>
+            <div id="toplevel"><textarea spellcheck="false" id="console" style="width: 560px;height:400px;"></textarea></div>
           </div>
           <div id="buttons">
 	    <button type="button" id="buttonSend" class="btn">Send</button>
@@ -55,5 +58,6 @@
         </div>
       </div>
     </div>
+    <script type="text/javascript" src="dragNdrop.js"></script>
 </body>
 </html>

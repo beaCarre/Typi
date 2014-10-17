@@ -153,3 +153,17 @@ dl dt {
     top: 2%;
     float: left
  }
+
+#logo { 
+    position: absolute;
+    top: 1%;
+    left:295px;
+    float: center
+ }
+
+#span7 {
+    background-image : url(tipi_logo.jpg);
+    background-position : 20% 0%;
+    background-size :100px;
+    background-repeat:no-repeat;
+}
