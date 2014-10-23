@@ -15,6 +15,12 @@ begin program "typi_js"
       sort = true
       has_asm = false
       files = [
+      	    "util.ml"
+	    "types.ml"
+	    "alex.ml"
+	    "asyn.ml"
+	    "typeur.ml"
+	    "env_typeur.ml"
       	    "jstool.ml"
       	    "main_js.ml"
       ]
