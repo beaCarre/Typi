@@ -4,8 +4,8 @@ open Alex;;
 open Asyn;;
 open Typeur;;
 
-let initial_typing_env = 
-ref(  let mk_type (ct1,ct2,ct3) = 
+let init_env () =
+(  let mk_type (ct1,ct2,ct3) = 
     Forall([], Fun_type (Pair_type(Const_type ct1, Const_type ct2),Const_type ct3))
   in 
     let int_ftype = mk_type(Int_type,Int_type,Int_type)
@@ -32,11 +32,14 @@ ref(  let mk_type (ct1,ct2,ct3) =
        ("!",  Forall([1], Fun_type (Ref_type alpha, alpha)));
        (":=",  Forall([1], Fun_type (Pair_type(Ref_type alpha, alpha),Const_type Unit_type)))
 ])
-;;
+
+let initial_typing_env = ref (init_env ())
+
+let initial_size = List.length !initial_typing_env
 
 let add_initial_typing_env (name,typ) = 
     initial_typing_env := (name,typ) :: (!initial_typing_env)
-;;
+
 
 let type_check e = 
   let et = typing_handler type_expr !initial_typing_env e 
@@ -45,7 +48,7 @@ let type_check e =
     let qt = snd(List.hd(generalize_types !initial_typing_env ["_zztop",t]))
     in 
       et,qt
-;;
+
 
 
 

@@ -7,7 +7,7 @@ open Env_typeur
 open Jstool
 open Keyboard
 
-let go_type_baby ta = 
+let go_type_baby ta tp= 
   try
     let lexbuf = Lexing.from_string (readFromTextArea ta) in
     writeInTextArea ta "\n$ ";
@@ -31,7 +31,7 @@ let go_type_baby ta =
           writeInTextArea ta (s^" : "); print_quantified_type ta qt; 
           print_newline ta; flush stdout;
           add_initial_typing_env (s,qt);
-	  print_current_env ta
+	  print_current_env tp
 	end
     end
 
@@ -41,9 +41,15 @@ let go_type_baby ta =
   | Parsing.Parse_error -> writeInTextArea ta "Erreur de syntaxe"; print_newline ta
   | _ -> () 
 
-let init console = 
+let init console typeCur = 
   let clearButton = getButton "buttonClear"
+  and resetButton = getButton "buttonReset"
   in
+  resetButton##onclick <- Dom_html.handler 
+    (fun _ ->
+      initial_typing_env:=init_env();
+      print_current_env typeCur;
+      Js._true);
   clearButton##onclick <- Dom_html.handler 
     (fun evt -> 
       console##value <- (Js.string "");
@@ -51,12 +57,13 @@ let init console =
   console##onkeydown <- Dom_html.handler 
       (fun evt -> 
 	let key = evt##keyCode in
-	if key=13 then go_type_baby console;
+	if key=13 then go_type_baby console typeCur;
 	Js._true;)
  
 let go _ =
-  let console = getTextArea "console" in
-  init console;
+  let console = getTextArea "console" 
+  and typeCur = getTable "currentType" in
+  init console typeCur;
   Js._true
 
 let _ = 

@@ -21,6 +21,8 @@ let getButton id = getId id Dom_html.CoerceTo.button
 
 let getTextArea id = getId id Dom_html.CoerceTo.textarea
 
+let getTable id = getId id Dom_html.CoerceTo.tbody
+
 let writeInTextArea ta msg = 
   ta##value <- ta##value##concat (Js.string msg)
 
@@ -33,6 +35,10 @@ let readFromTextArea ta =
 let readAndEscapeText ta =
   Js.to_string ta##value
 
+let makeTd str = 
+  let td = createTd window##document in
+  td##innerHTML <- Js.string str;
+  td
 
 (*********** Type printing ***************)
 
@@ -69,10 +75,26 @@ let print_quantified_type ta (Forall(gv,t)) =
         print_rec t
 
 
+(*************** Printing the current environement  *********************)
 
-let print_current_env ta =
-  List.iter 
-    (fun e -> writeInTextArea ta ((fst e)^" : ");
-              print_quantified_type ta (snd e);
-              writeInTextArea ta "\n\n")
-    !initial_typing_env
+
+let get_added() = 
+  let rec added_aux res fstsize = 
+    if List.length !initial_typing_env = fstsize then [] else
+      match !initial_typing_env with
+      | [] -> res
+      | h::tl -> added_aux (List.append res [h]) (fstsize - 1)
+  in
+  added_aux [] initial_size
+
+let print_tr couple = 
+  let fsttd = makeTd (fst couple)
+  and sndtd = makeTd ("")
+  and doc = window##document
+  in let tr = createTr doc in
+     Dom.appendChild tr fsttd;
+     Dom.appendChild tr sndtd;
+     tr
+
+let print_current_env tp =
+  List.iter (fun e -> Dom.appendChild tp (print_tr e)) !initial_typing_env
