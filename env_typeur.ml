@@ -4,6 +4,8 @@ open Alex;;
 open Asyn;;
 open Typeur;;
 
+let nb_added = ref 0
+
 let init_env () =
 (  let mk_type (ct1,ct2,ct3) = 
     Forall([], Fun_type (Pair_type(Const_type ct1, Const_type ct2),Const_type ct3))
@@ -38,7 +40,8 @@ let initial_typing_env = ref (init_env ())
 let initial_size = List.length !initial_typing_env
 
 let add_initial_typing_env (name,typ) = 
-    initial_typing_env := (name,typ) :: (!initial_typing_env)
+  nb_added := !nb_added + 1;
+  initial_typing_env := (name,typ) :: (!initial_typing_env)
 
 
 let type_check e = 

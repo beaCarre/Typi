@@ -40,6 +40,42 @@ let makeTd str =
   td##innerHTML <- Js.string str;
   td
 
+(* Type to_string *)
+
+let string_of_consttype = function 
+  Int_type -> "int"
+| Float_type -> "float"
+| String_type -> "string"
+| Bool_type -> "bool"
+| Unit_type -> "unit"
+
+let string_of_quantified_type (Forall(gv,t)) = 
+  let names = 
+    let rec names_of = function
+      (n,[]) -> []
+    | (n,(v1::lv)) -> (var_name n)::(names_of (n+1,lv))
+    in (names_of (1,gv))
+  in 
+    let var_names = combine (rev gv) names
+    in 
+      let rec string_rec exp =
+	let res = ref "" in
+       match exp with
+         Var_type {contents=(Instanciated t)} -> string_rec t 
+      |  Var_type {contents=(Unknown n)} -> 
+           let name = (try assoc n var_names 
+                       with Not_found -> raise (Failure "Non quantified variable in type"))
+           in res:=!res^name;!res
+      | Const_type ct -> res:= (!res^(string_of_consttype ct));!res
+      | Pair_type(t1,t2) -> res:= (!res^"("^(string_rec t1)
+                            ^" * "^(string_rec t2)^")");!res
+      | List_type t ->  res:= !res^"(("^(string_rec t)^") list)";!res
+
+      | Fun_type(t1,t2)  ->res:= !res^"("^(string_rec t1)
+                            ^" -> "^(string_rec t2)^")";!res
+      | Ref_type t -> res:= !res^ "(("^( string_rec t)^") ref)";!res
+      in 
+        string_rec t
 (*********** Type printing ***************)
 
 let print_consttype ta = function 
@@ -89,7 +125,7 @@ let get_added() =
 
 let print_tr couple = 
   let fsttd = makeTd (fst couple)
-  and sndtd = makeTd ("")
+  and sndtd = makeTd (string_of_quantified_type (snd couple))
   and doc = window##document
   in let tr = createTr doc in
      Dom.appendChild tr fsttd;
@@ -97,4 +133,10 @@ let print_tr couple =
      tr
 
 let print_current_env tp =
-  List.iter (fun e -> Dom.appendChild tp (print_tr e)) !initial_typing_env
+  Dom.insertBefore tp (print_tr (List.hd !initial_typing_env)) tp##firstChild
+  (*let rec aux env nb =
+    match env with
+    | [] -> ()
+    | h::tl -> if nb > 0 then Dom.appendChild tp (print_tr h);aux tl (nb -1)
+  in
+  aux !initial_typing_env !nb_added*)

@@ -33,8 +33,8 @@ let go_type_baby ta tp=
           add_initial_typing_env (s,qt);
 	  print_current_env tp
 	end
-    end
-
+    end;
+    ta##value <- (Js.string "")
   with Failure "type_check" -> writeInTextArea ta "Erreur de typage"; print_newline ta
   | Toplevel -> ()
   | Failure s -> writeInTextArea ta ("Erreur " ^ s); print_newline ta
@@ -48,6 +48,7 @@ let init console typeCur =
   resetButton##onclick <- Dom_html.handler 
     (fun _ ->
       initial_typing_env:=init_env();
+      nb_added:=0;
       print_current_env typeCur;
       Js._true);
   clearButton##onclick <- Dom_html.handler 
