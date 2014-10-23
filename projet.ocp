@@ -21,6 +21,7 @@ begin program "typi_js"
 	    "asyn.ml"
 	    "typeur.ml"
 	    "env_typeur.ml"
+	    "keyboard.ml"
       	    "jstool.ml"
       	    "main_js.ml"
       ]

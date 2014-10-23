@@ -4,8 +4,6 @@ open Alex;;
 open Asyn;;
 open Typeur;;
 
-
-
 let initial_typing_env = 
 ref(  let mk_type (ct1,ct2,ct3) = 
     Forall([], Fun_type (Pair_type(Const_type ct1, Const_type ct2),Const_type ct3))
