@@ -7,64 +7,122 @@ open Env_typeur
 open Jstool
 open Keyboard
 
-let go_type_baby ta tp= 
-  try
-    let lexbuf = Lexing.from_string (readFromTextArea ta) in
-    writeInTextArea ta "\n$ ";
-    let result = Asyn.implementation Alex.main lexbuf in
-    begin
-      match result with 
-	Expr e ->  
-          let ne,qt = type_check e in 
-          begin 
-	    writeInTextArea ta "- : ";
-	    print_quantified_type ta qt; 
-	    print_newline ta
-          end
-      | Decl (Let(b,s,e)) -> 
-	let e = 
-          if not b then e
-          else (Letin(b,s,e,Var s))
-	in 
-	let ne,qt = type_check e in
-	begin 
-          writeInTextArea ta (s^" : "); print_quantified_type ta qt; 
-          print_newline ta; flush stdout;
-          add_initial_typing_env (s,qt);
-	  print_current_env tp
-	end
-    end;
-    ta##value <- (Js.string "")
-  with Failure "type_check" -> writeInTextArea ta "Erreur de typage"; print_newline ta
-  | Toplevel -> ()
-  | Failure s -> writeInTextArea ta ("Erreur " ^ s); print_newline ta
-  | Parsing.Parse_error -> writeInTextArea ta "Erreur de syntaxe"; print_newline ta
-  | _ -> () 
+type zippo = {mutable cmds: string list
+	     ; mutable idx: int
+	     ; mutable size: int}
 
-let init console typeCur = 
+let historique = {cmds=[]; idx=0; size=0}
+
+let go_type_baby in_console out_console tp = 
+  begin try
+	  let entry = readFromTextArea in_console in
+	  historique.cmds <- entry::historique.cmds;
+	  historique.size <- historique.size + 1;
+	  historique.idx <- 0;
+	  let lexbuf = Lexing.from_string entry in
+	  let l_result = Asyn.start Alex.main lexbuf in
+	  List.iter (function
+	  | Expr e ->  
+	    let ne,qt = type_check e in 
+	    begin 
+	      writeInTextArea out_console "\n - ";
+	      writeInTextArea out_console ": ";
+	      print_quantified_type out_console qt; 
+	    end
+	  | Decl (Let(b,s,e)) -> 
+	    let e = 
+	      if not b then e
+	      else (Letin(b,s,e,Var s))
+	    in 
+	    let ne,qt = type_check e in
+	    writeInTextArea out_console "\n - ";
+	    writeInTextArea out_console (s^" : "); 
+	    print_quantified_type out_console qt;
+	    add_initial_typing_env (s,qt);
+	    print_current_env tp
+	  ) l_result
+    with Failure "type_check" -> 
+      writeInTextArea out_console "\n - ";  
+      writeInTextArea out_console "Erreur de typage"
+    | Toplevel -> ()
+    | Failure s -> 
+      writeInTextArea out_console "\n - ";
+      writeInTextArea out_console ("Erreur " ^ s)
+    | Parsing.Parse_error -> 
+      writeInTextArea out_console "\n - "; 
+      writeInTextArea out_console "Erreur de syntaxe"
+  (* | End_of_file -> () ya pu*)
+  end;
+  out_console##scrollTop <- out_console##scrollHeight;
+  in_console##value <- (Js.string "")
+
+
+let init in_console out_console typeCur =
+  let multiline = ref false in
   let clearButton = getButton "buttonClear"
   and resetButton = getButton "buttonReset"
   in
   resetButton##onclick <- Dom_html.handler 
     (fun _ ->
       initial_typing_env:=init_env();
+      empty typeCur;
       nb_added:=0;
-      print_current_env typeCur;
       Js._true);
   clearButton##onclick <- Dom_html.handler 
     (fun evt -> 
-      console##value <- (Js.string "");
+      out_console##value <- (Js.string "");
       Js._true);
-  console##onkeydown <- Dom_html.handler 
-      (fun evt -> 
-	let key = evt##keyCode in
-	if key=13 then go_type_baby console typeCur;
-	Js._true;)
+  in_console##onkeydown <- Dom_html.handler 
+    (fun evt -> 
+      let key = evt##keyCode in
+      if key=13 && (not !multiline) then begin go_type_baby in_console out_console typeCur;
+	Dom_html.stopPropagation evt
+      end;
+      if key=16 then multiline := true;
+      Js._true);
+  in_console##onkeyup <- Dom_html.handler 
+    (fun evt -> 
+      let key = evt##keyCode in
+      if key=16 then multiline := false;
+      let put_historic_value () =
+	match historique.idx with
+	| x when x < 0 ->
+	  historique.idx <- -1;
+	  in_console##value <- Js.string ""
+	| x when x > historique.size - 1 ->
+	  historique.idx <- historique.size;
+	  in_console##value <- Js.string ""
+	| x -> let str = 
+		 List.nth historique.cmds (historique.size - 1 - x)
+	       in
+	       in_console##value <- Js.string str
+      in
+      if key=40 && !multiline then 
+	begin
+	  historique.idx <- historique.idx - 1;
+	  put_historic_value ()
+	end
+      ;
+      if key=38 && !multiline then 
+	begin
+	  historique.idx <- historique.idx + 1;
+	  put_historic_value ()
+	end
+      ;
+
+      if key = 13 then
+	begin
+	  in_console##value <- (Js.string "")
+        end
+      ;
+     
+      Js._true;)
  
 let go _ =
-  let console = getTextArea "console" 
-  and typeCur = getTable "currentType" in
-  init console typeCur;
+  let out_console = getTextArea "out" 
+  and in_console = getTextArea "in" 
+  and typeCur = getTbody "currentType" in
+  init in_console out_console typeCur;
   Js._true
 
 let _ = 

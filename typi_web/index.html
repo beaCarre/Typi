@@ -19,26 +19,26 @@
 	   Application Web de typage d’un mini-ML fonctionnel et impératif. (Juste un typeur lamdba... Typi, yeah pretty indeed).
 	 </p>
 	 <br/>
-	 <h5>Type environement</h5>
+	 <h5>Environnement de typage</h5>
          <table id="tableTypes" class="zebra-striped">
-           <thead><tr><th id="text-commands">Names</th><th id="text-effects">Types</th></tr></thead>
+           <thead><tr><th id="text-commands">Noms</th><th id="text-effects">Types</th></tr></thead>
            <tbody id="currentType">
           </tbody>
 	 </table>
 	 <br/>
 	 <br/>
 	 <br/>
-	 <h5>Manual</h5>
+	 <h5>Aide</h5>
          <table class="zebra-striped">
-           <thead><tr><th id="text-commands">Commands</th><th id="text-effects">Effects</th></tr></thead>
-           <tbody><tr><td id="text-enter">Enter / Return</td> <td id="text-submit">Submit code</td></tr>
-             <tr><td id="text-arrows">Up / Down</td><td id="text-history">Cycle through history</td></tr>
-             <tr><td id="text-newline">Shift + Enter</td><td id="text-multiline">Multiline edition</td></tr>
+           <thead><tr><th id="text-commands">Commande</th><th id="text-effects">Effet</th></tr></thead>
+           <tbody><tr><td id="text-enter">Enter</td> <td id="text-submit">Soumettre le code </td></tr>
+             <tr><td id="text-newline">Shift + Enter</td><td id="text-multiline">Edition sur plusieurs lignes</td></tr>
+             <tr><td id="text-arrows">Haut / Bas</td><td id="text-history">Naviguer dans l'historique</td></tr>
           </tbody></table>
        </div>
         <div class="span9 ocaml">
           <div id="toplevel-container" class="">
-          <div id="dragndrop"><img src="arrow.png" width="140" height="70"></div>
+            <div id="dragndrop"><img src="arrow.png" width="140" height="70"></div>
             <pre id="output" style="background-color:black;">
 	        Hi, what type of Type do you like?
 	      ----------------------------------------
@@ -46,8 +46,10 @@
 	           synthetiseur de types à la ML
 	    </pre>
 
-            <div id="toplevel"><textarea autofocus="true" spellcheck="false" id="console" style="width: 560px;height:400px;"></textarea>
-	    </div>
+            <div id="toplevel">
+	      <textarea id="out" readonly style="width: 560px;height:300px; textcolor:gray"></textarea>
+	      <textarea autofocus="true" spellcheck="false" id="in" style="width: 560px;height:50px; border:1px solid white; padding:10px"></textarea>
+	    </div>            	    
           </div>
 
           <div id="buttons">

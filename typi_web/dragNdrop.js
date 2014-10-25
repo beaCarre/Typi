@@ -12,7 +12,7 @@ Developed by Craig Buckler (@craigbuckler) of OptimalWorks.net
     
     // output information
     function Output(msg) {
-	var m = $id("console");
+	var m = $id("in");
 	m.value = m.value+msg+"\n";
     }
     
@@ -60,7 +60,7 @@ Developed by Craig Buckler (@craigbuckler) of OptimalWorks.net
     function Init() {
 	
 	//var fileselect = $id("fileselect");
-	var filedrag = $id("console");
+	var filedrag = $id("in");
 	
 	// file select
 	//fileselect.addEventListener("change", FileSelectHandler, false);

@@ -15,16 +15,25 @@ let getElemFromID id coerceCible =
       (fun () -> failwith ("this id : "^id^" does not match any element"))
 
 
-let getId = fun id -> getElemFromID id
+let getId id = getElemFromID id
 
 let getButton id = getId id Dom_html.CoerceTo.button
 
 let getTextArea id = getId id Dom_html.CoerceTo.textarea
 
-let getTable id = getId id Dom_html.CoerceTo.tbody
+let getTbody id = getId id Dom_html.CoerceTo.tbody
+
+let getTable id = getId id Dom_html.CoerceTo.table
+
+let empty item = item##innerHTML <- ""
 
 let writeInTextArea ta msg = 
   ta##value <- ta##value##concat (Js.string msg)
+
+let newTbod () = 
+  let tb = (createTbody window##document) in
+  tb##id<-Js.string "currentType";
+  tb
 
 let print_newline ta = 
   writeInTextArea ta "\n"
@@ -32,8 +41,10 @@ let print_newline ta =
 let readFromTextArea ta = 
   Js.to_string ta##value
 
-let readAndEscapeText ta =
-  Js.to_string ta##value
+let readLastExpr ta =
+  let str = ta##value |> Js.to_string in
+  String.rindex str '$' 
+  |> fun i -> String.sub str i (String.length str - i -1)
 
 let makeTd str = 
   let td = createTd window##document in
@@ -113,15 +124,10 @@ let print_quantified_type ta (Forall(gv,t)) =
 
 (*************** Printing the current environement  *********************)
 
-
-let get_added() = 
-  let rec added_aux res fstsize = 
-    if List.length !initial_typing_env = fstsize then [] else
-      match !initial_typing_env with
-      | [] -> res
-      | h::tl -> added_aux (List.append res [h]) (fstsize - 1)
-  in
-  added_aux [] initial_size
+let empty tp = 
+  for i = 0 to !nb_added do
+    tp##deleteRow(0)
+  done
 
 let print_tr couple = 
   let fsttd = makeTd (fst couple)
@@ -132,11 +138,9 @@ let print_tr couple =
      Dom.appendChild tr sndtd;
      tr
 
+let setCaretPos elem num = 
+  Js.Unsafe.fun_call (Js.Unsafe.variable "setCaretPosition") 
+    [|Js.Unsafe.inject elem;Js.Unsafe.inject num|]
+
 let print_current_env tp =
   Dom.insertBefore tp (print_tr (List.hd !initial_typing_env)) tp##firstChild
-  (*let rec aux env nb =
-    match env with
-    | [] -> ()
-    | h::tl -> if nb > 0 then Dom.appendChild tp (print_tr h);aux tl (nb -1)
-  in
-  aux !initial_typing_env !nb_added*)

@@ -13,6 +13,7 @@ let keyword_table = (Hashtbl.create 100 : (string, token) Hashtbl.t)
 do_list (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
   "else", ELSE;
   "function", FUNCTION;
+  "fun", FUNCTION;
   "if", IF;
   "in", IN;
   "let", LET;

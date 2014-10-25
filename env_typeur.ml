@@ -14,6 +14,7 @@ let init_env () =
     and float_ftype = mk_type(Float_type,Float_type,Float_type)
     and int_predtype = mk_type(Int_type,Int_type,Bool_type)
     and float_predtype = mk_type(Float_type,Float_type,Bool_type)
+    and bool_predtype = mk_type(Bool_type,Bool_type,Bool_type)
     and alpha = Var_type(ref(Unknown 1))
     and beta = Var_type(ref(Unknown 2))
     in 
@@ -24,6 +25,7 @@ let init_env () =
       (map (function s -> (s,int_ftype)) ["*";"+";"-";"/"]) @
       (map (function s -> (s,float_ftype)) ["*.";"+.";"-.";"/."]) @
       (map (function s -> (s,int_predtype)) ["<";">";"<=";">="]) @
+      (map (function s -> (s,bool_predtype)) ["&&";"||"]) @
       (map (function s -> (s,float_predtype)) ["<.";">.";"<=.";">=."]) @
       ["^", mk_type (String_type, String_type, String_type)] @
       [("hd",Forall([1], Fun_type (List_type alpha, alpha)));
@@ -31,6 +33,7 @@ let init_env () =
        ("fst",Forall([1;2], Fun_type (Pair_type (alpha,beta),alpha)));
        ("snd",Forall([1;2], Fun_type (Pair_type (alpha,beta),beta)));
        ("ref",Forall([1], Fun_type (alpha, Ref_type alpha)));
+       ("not",  Forall([1], Fun_type (Const_type Bool_type,Const_type Bool_type)));
        ("!",  Forall([1], Fun_type (Ref_type alpha, alpha)));
        (":=",  Forall([1], Fun_type (Pair_type(Ref_type alpha, alpha),Const_type Unit_type)))
 ])
@@ -42,7 +45,6 @@ let initial_size = List.length !initial_typing_env
 let add_initial_typing_env (name,typ) = 
   nb_added := !nb_added + 1;
   initial_typing_env := (name,typ) :: (!initial_typing_env)
-
 
 let type_check e = 
   let et = typing_handler type_expr !initial_typing_env e 
@@ -101,4 +103,4 @@ let parse_phrase parsing_fun lexing_fun lexbuf =
          raise Toplevel
 ;;
 
-let parse_impl_phrase = parse_phrase Asyn.implementation Alex.main;;
+let parse_impl_phrase = parse_phrase Asyn.start Alex.main;;
