@@ -133,6 +133,9 @@ let type_const = function
 
 
 
+let isExpansive = function
+  | App (_,_) | Ref _ -> true
+  | _  -> false
 
 (**
  let type_instance st =
@@ -195,13 +198,7 @@ let rec type_expr gamma =
               let u = new_unknown()
               and v = new_unknown()
               in
-	      (match s with 
-              | ":=" -> 
-		if (is_non_expansive e1 && is_non_expansive e2) 
-		then (failwith "tout va bien") 
-		else (failwith "tout va mal")
-              | _ -> 
-                unify_types(t0, Fun_type(Pair_type (t1,t2),u))); u
+                unify_types(t0, Fun_type(Pair_type (t1,t2),u)); u
 
 
        | Pair (e1,e2) -> Pair_type (type_rec e1, type_rec e2) 
@@ -224,9 +221,13 @@ let rec type_expr gamma =
              let new_env = (s,Forall ([],t))::gamma in
                Fun_type (t, type_expr new_env e)
        | Letin (false,s,e1,e2) -> 
-           let t1 = type_rec e1 in
-             let new_env = generalize_types gamma [ (s,t1) ] in
-               type_expr (new_env@gamma) e2
+	 let t1 = type_rec e1 in
+         if  not (isExpansive e2) then 
+           let new_env = generalize_types gamma [ (s,t1) ] in
+           type_expr (new_env@gamma) e2
+         else 
+           type_expr ((s,(Forall([],t1))) :: gamma) e2	     
+
        | Letin (true,s,e1,e2) -> 
            let u = new_unknown () in
              let new_env = (s,Forall([  ],u))::gamma in

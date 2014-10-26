@@ -75,7 +75,7 @@ let parse_phrase parsing_fun lexing_fun lexbuf =
       skip() in
   let skip_maybe () =
     if Parsing.is_current_lookahead EOF
-    or Parsing.is_current_lookahead SEMISEMI
+    || Parsing.is_current_lookahead SEMISEMI
     then () else skip() in
 
 
