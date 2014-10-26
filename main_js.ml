@@ -37,8 +37,8 @@ let go_type_baby in_console out_console tp =
 	    let ne,qt = type_check e true in
 	    writeInTextArea out_console "\n - ";
 	    writeInTextArea out_console (s^" : "); 
-	    print_quantified_type out_console qt;
 	    add_initial_typing_env (s,qt);
+	    print_quantified_type out_console qt;
 	    print_current_env tp
 	  ) l_result
     with Failure "type_check" -> 
@@ -51,7 +51,6 @@ let go_type_baby in_console out_console tp =
     | Parsing.Parse_error -> 
       writeInTextArea out_console "\n - "; 
       writeInTextArea out_console "Erreur de syntaxe"
-  (* | End_of_file -> () ya pu*)
   end;
   out_console##scrollTop <- out_console##scrollHeight;
   in_console##value <- (Js.string "")
@@ -61,7 +60,12 @@ let init in_console out_console typeCur =
   let multiline = ref false in
   let clearButton = getButton "buttonClear"
   and resetButton = getButton "buttonReset"
+  and sendButton = getButton "buttonSend"
   in
+  sendButton##onclick <- Dom_html.handler 
+    (fun _ -> 
+      go_type_baby in_console out_console typeCur;
+      Js._true);
   resetButton##onclick <- Dom_html.handler 
     (fun _ ->
       initial_typing_env:=init_env();

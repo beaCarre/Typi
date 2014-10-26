@@ -4,16 +4,20 @@ open Types
 
 let new_unknown,new_weak,reset_unknowns,max_unknown = 
   let c1 = ref 1 
-  and c2 = ref 1
-  and max = ref 10000 
+  and max = ref 10000
   in 
-   ( (function () -> c1:=!c1+1; if (!c1)+(!c2) >= !max then failwith "No more types";
+   ( (function () -> c1:=!c1+1; if (!c1) >= !max then failwith "No more types";
                      Var_type( ref(Unknown !c1))),
-     (function () -> c2:=!c2+1; if (!c2)+(!c1) >= !max then failwith "No more types";
-                     Var_type( ref(Weak !c2))),
-     (function () -> c1:=1;c2:=1),
+     (function () -> c1:=!c1+1; if (!c1) >= !max then failwith "No more types";
+
+       Var_type( ref(Weak !c1))),
+     (function () -> c1:=1),
      (function () -> Var_type(ref(Unknown !max))))
 
+let new_entry t =
+  match t with 
+  | Var_type {contents=(Weak n)} -> new_weak()
+  | _ -> new_unknown ()
 
 type quantified_type = Forall of (int list) * ml_type
 
@@ -23,7 +27,7 @@ let rec vars_of_type t =
    | Var_type vt ->
        ( match !vt with
            Unknown n -> if List.mem n vl then vl else n::vl
-         | Weak n -> vl
+         | Weak n -> if List.mem n vl then vl else n::vl
          | Instanciated t -> vars vl t
        )
    | Pair_type (t1,t2) -> vars (vars vl t1) t2
@@ -51,14 +55,13 @@ let free_vars_of_type_env l =
 
 let type_instance st =
   match st with Forall(gv,t) -> 
-    let unknowns = List.map (function n -> n,new_unknown()) gv
-    and weaks = List.map (function n -> n,new_weak()) gv
+    let weaks_unknowns = List.map (function n -> n,new_entry t ) gv
     in
     let rec instance = function
       | Var_type {contents=(Unknown n)} as t ->
-        (try List.assoc n unknowns with Not_found -> t)
+        (try List.assoc n weaks_unknowns with Not_found -> t)
       | Var_type {contents=(Weak n)} as t ->  
-	(try List.assoc n weaks with Not_found -> t)
+	(try List.assoc n weaks_unknowns with Not_found -> t)
       | Var_type {contents=(Instanciated t)} -> instance t
       | Const_type ct as t -> t
       | Pair_type (t1,t2) -> Pair_type (instance t1, instance t2)
@@ -126,8 +129,8 @@ let type_const = function
 
 let isExpansive expr =
   match expr with
-  | App (_,_) | Ref _ -> failwith "expansive"; true
-  | _  -> failwith "non-expansive" ;false
+  | App (_,_) | Ref _ ->  true
+  | _  ->  false
 
 let generalize_types gamma l =
    let fvg = free_vars_of_type_env gamma
@@ -148,7 +151,7 @@ let rec type_expr gamma =
        in 
        let t1 = type_instance t
        and t2 = type_rec e generalisation in
-       let u = new_unknown()
+       let u = if generalisation then new_unknown() else new_weak()
        in
        unify_types(t1, Fun_type(t2,u)); u
 	 
@@ -165,26 +168,31 @@ let rec type_expr gamma =
        in
        unify_types(t0, Fun_type(Pair_type (t1,t2),u));
        u
-	 
+
      | Pair (e1,e2) -> Pair_type (type_rec e1 generalisation, type_rec e2 generalisation)
+
      | Cons (e1,e2) ->
        let t1 = type_rec e1 generalisation
        and t2 = type_rec e2 generalisation in
        unify_types (List_type t1, t2); t2
+
      | Cond (e1,e2,e3) ->
        let t1 = unify_types (Const_type Bool_type, type_rec e1 generalisation)
        and t2 = type_rec e2 generalisation
        and t3 = type_rec e3 generalisation in 
        unify_types (t2,t3); t2
+    
      | App (e1,e2) ->
        let t1 = type_rec e1 generalisation
        and t2 = type_rec e2 generalisation in
        let u = new_unknown() in
        unify_types (t1, Fun_type (t2,u)); u
+
      | Abs(s,e) ->
-       let t = new_unknown() in
-             let new_env = (s,Forall ([],t))::gamma in
-             Fun_type (t, type_expr new_env e generalisation)
+       let t = if generalisation then new_unknown() else new_weak() in
+       let new_env = (s,Forall ([],t))::gamma in
+       Fun_type (t, type_expr new_env e false)
+
      | Letin (false,s,e1,e2) ->
 	 (* let s = e1 in e2 *)
 	 (* false pour non récursive *)
@@ -194,8 +202,8 @@ let rec type_expr gamma =
          type_expr (new_env@gamma) e2 generalisation
        else
 	 begin
-           type_expr ((s,(Forall([],t1))) :: gamma) e2 generalisation 
-	 end
+           type_expr ((s,(Forall([],t1))) :: gamma) e2 generalisation        end
+
      | Letin (true,s,e1,e2) -> 
 	   (* true pour recursive *)
            let u = new_unknown () in
@@ -208,7 +216,8 @@ let rec type_expr gamma =
 	     begin
                type_expr ((s,(Forall([],t1))) :: gamma) e2 generalisation
 	     end
-     | Ref e -> Ref_type (type_rec e generalisation)
+
+     | Ref e -> Ref_type (type_rec e false)
    in
    type_rec
      
@@ -231,7 +240,7 @@ let var_name n =
         else (name_of q)^(ascii (96+r))
    in "'"^(name_of n)
 
-let weakvar_name n = 
+let weakvar_name n =
   let rec name_of n = 
      let q,r = ((n / 26), (n mod 26))
      in 

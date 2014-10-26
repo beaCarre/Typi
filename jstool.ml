@@ -75,11 +75,11 @@ let string_of_quantified_type (Forall(gv,t)) =
          Var_type {contents=(Instanciated t)} -> string_rec t 
       |  Var_type {contents=(Unknown n)} -> 
            let name = (try assoc n var_names 
-                       with Not_found -> raise (Failure "Non quantified variable in type"))
+                       with Not_found -> raise (Failure "Non quantified variable in type jstool78"))
            in res:=!res^name;!res
       |  Var_type {contents=(Weak n)} -> 
            let name = (try assoc n var_names 
-                       with Not_found -> raise (Failure "Non quantified variable in type"))
+                       with Not_found -> raise (Failure "Non weak variable in type jstool82"))
            in res:=!res^name;!res
       | Const_type ct -> res:= (!res^(string_of_consttype ct));!res
       | Pair_type(t1,t2) -> res:= (!res^"("^(string_rec t1)
@@ -113,11 +113,11 @@ let print_quantified_type ta (Forall(gv,t)) =
          Var_type {contents=(Instanciated t)} -> print_rec t 
       |  Var_type {contents=(Unknown n)} -> 
            let name = (try assoc n var_names 
-                       with Not_found -> raise (Failure "Non quantified variable in type"))
+                       with Not_found -> raise (Failure "Non quantified variable in type jstool116"))
            in writeInTextArea ta name
       |  Var_type {contents=(Weak n)} -> 
-           let name = (try assoc n var_names 
-                       with Not_found -> raise (Failure "Non quantified variable in type"))
+           let name = (try assoc n var_names
+                       with Not_found -> raise (Failure "Non weak variable in type jstool120"))
            in writeInTextArea ta name
       | Const_type ct -> print_consttype ta ct
       | Pair_type(t1,t2) -> writeInTextArea ta "("; print_rec t1;
