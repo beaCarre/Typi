@@ -23,7 +23,7 @@ let go_type_baby in_console out_console tp =
 	  let l_result = Asyn.start Alex.main lexbuf in
 	  List.iter (function
 	  | Expr e ->  
-	    let ne,qt = type_check e in 
+	    let ne,qt = type_check e true in 
 	    begin 
 	      writeInTextArea out_console "\n - ";
 	      writeInTextArea out_console ": ";
@@ -33,8 +33,8 @@ let go_type_baby in_console out_console tp =
 	    let e = 
 	      if not b then e
 	      else (Letin(b,s,e,Var s))
-	    in 
-	    let ne,qt = type_check e in
+	    in
+	    let ne,qt = type_check e true in
 	    writeInTextArea out_console "\n - ";
 	    writeInTextArea out_console (s^" : "); 
 	    print_quantified_type out_console qt;
@@ -110,7 +110,7 @@ let init in_console out_console typeCur =
 	end
       ;
 
-      if key = 13 then
+      if key = 13 && not !multiline then
 	begin
 	  in_console##value <- (Js.string "")
         end

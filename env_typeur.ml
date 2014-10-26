@@ -46,8 +46,8 @@ let add_initial_typing_env (name,typ) =
   nb_added := !nb_added + 1;
   initial_typing_env := (name,typ) :: (!initial_typing_env)
 
-let type_check e = 
-  let et = typing_handler type_expr !initial_typing_env e 
+let type_check e g = 
+  let et = typing_handler type_expr !initial_typing_env e g 
   in 
     let t =  et in 
     let qt = snd(List.hd(generalize_types !initial_typing_env ["_zztop",t]))

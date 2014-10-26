@@ -1,5 +1,6 @@
 type vartype = 
   Unknown of int
+| Weak of int
 | Instanciated of ml_type
 and consttype = 
   Int_type

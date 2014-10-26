@@ -64,7 +64,7 @@ let string_of_quantified_type (Forall(gv,t)) =
   let names = 
     let rec names_of = function
       (n,[]) -> []
-    | (n,(v1::lv)) -> (var_name n)::(names_of (n+1,lv))
+    | (n,(v1::lv)) -> (get_name t n)::(names_of (n+1,lv))
     in (names_of (1,gv))
   in 
     let var_names = combine (rev gv) names
@@ -74,6 +74,10 @@ let string_of_quantified_type (Forall(gv,t)) =
        match exp with
          Var_type {contents=(Instanciated t)} -> string_rec t 
       |  Var_type {contents=(Unknown n)} -> 
+           let name = (try assoc n var_names 
+                       with Not_found -> raise (Failure "Non quantified variable in type"))
+           in res:=!res^name;!res
+      |  Var_type {contents=(Weak n)} -> 
            let name = (try assoc n var_names 
                        with Not_found -> raise (Failure "Non quantified variable in type"))
            in res:=!res^name;!res
@@ -100,7 +104,7 @@ let print_quantified_type ta (Forall(gv,t)) =
   let names = 
     let rec names_of = function
       (n,[]) -> []
-    | (n,(v1::lv)) -> (var_name n)::(names_of (n+1,lv))
+    | (n,(v1::lv)) -> (get_name t n)::(names_of (n+1,lv))
     in (names_of (1,gv))
   in 
     let var_names = combine (rev gv) names
@@ -108,6 +112,10 @@ let print_quantified_type ta (Forall(gv,t)) =
       let rec print_rec = function 
          Var_type {contents=(Instanciated t)} -> print_rec t 
       |  Var_type {contents=(Unknown n)} -> 
+           let name = (try assoc n var_names 
+                       with Not_found -> raise (Failure "Non quantified variable in type"))
+           in writeInTextArea ta name
+      |  Var_type {contents=(Weak n)} -> 
            let name = (try assoc n var_names 
                        with Not_found -> raise (Failure "Non quantified variable in type"))
            in writeInTextArea ta name

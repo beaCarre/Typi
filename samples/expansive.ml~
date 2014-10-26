@@ -1,0 +1,2 @@
+let f = ref (fun x -> x)
+f:= fun x -> x+1

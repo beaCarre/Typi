@@ -2,20 +2,20 @@ open Util
 open Types
 
 
-let new_unknown,reset_unknowns,max_unknown = 
-  let c = ref 1 
+let new_unknown,new_weak,reset_unknowns,max_unknown = 
+  let c1 = ref 1 
+  and c2 = ref 1
   and max = ref 10000 
   in 
-   ( (function () -> c:=!c+1; if !c >= !max then failwith "No more types";
-                     Var_type( ref(Unknown !c))),
-     (function () -> c:=1),
+   ( (function () -> c1:=!c1+1; if (!c1)+(!c2) >= !max then failwith "No more types";
+                     Var_type( ref(Unknown !c1))),
+     (function () -> c2:=!c2+1; if (!c2)+(!c1) >= !max then failwith "No more types";
+                     Var_type( ref(Weak !c2))),
+     (function () -> c1:=1;c2:=1),
      (function () -> Var_type(ref(Unknown !max))))
 
 
-
-
 type quantified_type = Forall of (int list) * ml_type
-
 
 let rec vars_of_type t =
    let rec vars vl = function
@@ -23,6 +23,7 @@ let rec vars_of_type t =
    | Var_type vt ->
        ( match !vt with
            Unknown n -> if List.mem n vl then vl else n::vl
+         | Weak n -> vl
          | Instanciated t -> vars vl t
        )
    | Pair_type (t1,t2) -> vars (vars vl t1) t2
@@ -31,7 +32,6 @@ let rec vars_of_type t =
    | Ref_type t -> vars vl t
    in
      vars [] t 
-
 
 let subtract l1 l2 =
    List.flatten (List.map (function id ->
@@ -49,23 +49,24 @@ let free_vars_of_type_env l =
      flat ( List.map (function (id,Forall (v,t))
                         -> free_vars_of_type (v,t)) l) 
 
-
-
- let type_instance st =
-   match st with Forall(gv,t) -> 
-     let unknowns = List.map (function n -> n,new_unknown()) gv
-     in
-       let rec instance = function
-         Var_type {contents=(Unknown n)} as t ->
-            (try List.assoc n unknowns with Not_found -> t)
-       | Var_type {contents=(Instanciated t)} -> instance t
-       | Const_type ct as t -> t
-       | Pair_type (t1,t2) -> Pair_type (instance t1, instance t2)
-       | List_type t -> List_type (instance t)
-       | Fun_type (t1,t2) -> Fun_type (instance t1, instance t2)
-       | Ref_type t -> Ref_type (instance t)
-       in
-         instance t 
+let type_instance st =
+  match st with Forall(gv,t) -> 
+    let unknowns = List.map (function n -> n,new_unknown()) gv
+    and weaks = List.map (function n -> n,new_weak()) gv
+    in
+    let rec instance = function
+      | Var_type {contents=(Unknown n)} as t ->
+        (try List.assoc n unknowns with Not_found -> t)
+      | Var_type {contents=(Weak n)} as t ->  
+	(try List.assoc n weaks with Not_found -> t)
+      | Var_type {contents=(Instanciated t)} -> instance t
+      | Const_type ct as t -> t
+      | Pair_type (t1,t2) -> Pair_type (instance t1, instance t2)
+      | List_type t -> List_type (instance t)
+      | Fun_type (t1,t2) -> Fun_type (instance t1, instance t2)
+      | Ref_type t -> Ref_type (instance t)
+    in
+    instance t
 
 type typing_error =
    Unbound_var of string
@@ -73,14 +74,12 @@ type typing_error =
 
 exception Type_error of typing_error
 
-
-
 let occurs n t = List.mem n (vars_of_type t)
 
 let rec shorten = function
      Var_type (vt) as tt ->
        (match !vt with
-            Unknown _  -> tt
+            Unknown _  | Weak _ -> tt
           | Instanciated ((Var_type _) as t) ->
               let t2 = shorten t in
                 vt := Instanciated t;
@@ -89,29 +88,24 @@ let rec shorten = function
        )
    | t -> t
 
-let rec is_non_expansive expr = 
-  match expr with
-    Const _ -> true
-  | Var _ -> true
-  | Unop (_,e) -> is_non_expansive e
-  | Binop (_,e1,e2) -> (is_non_expansive e1) && (is_non_expansive e2) 
-  | Pair(a,b) -> (is_non_expansive a) && (is_non_expansive b)
-  | _ -> false
-
-let unify_ref_types (t1,t2) = ()
-
 let rec unify_types (t1,t2) =
     let lt1 = shorten t1 and lt2 = shorten t2
     in
       match (lt1,lt2) with
-      | Var_type ( {contents=Unknown n} as occn ),
+      | Var_type ({contents=Weak n} as occn),
+        Var_type {contents=Instanciated _} ->
+          occn:= Instanciated lt2
+      | Var_type ({contents=Weak n} as occn),
+        Var_type {contents=Weak m} ->
+          if n=m then () else occn:= Instanciated lt2
+      | Var_type ({contents=Unknown n} as occn),
         Var_type {contents=Unknown m} ->
           if n=m then () else occn:= Instanciated lt2
       | Var_type ({contents=(Unknown n)} as occn), _ -> 
           if occurs n lt2
           then raise (Type_error(Clash(lt1,lt2)))
           else occn:=Instanciated lt2
-      | _ , Var_type ({contents=(Unknown n)}) -> unify_types (lt2,lt1)
+      | _ , Var_type ({contents=(Unknown n)}) -> unify_types (lt2,lt1)    | _ , Var_type ({contents=(Weak n)}) -> unify_types (lt2,lt1)    
       | Const_type ct1, Const_type ct2 ->
           if ct1=ct2 then () else raise (Type_error(Clash(lt1,lt2)))
       | Pair_type (t1,t2), Pair_type (t3,t4) ->
@@ -119,9 +113,8 @@ let rec unify_types (t1,t2) =
       | List_type t1, List_type t2 ->  unify_types (t1,t2)
       | Fun_type (t1,t2), Fun_type (t3,t4) -> 
          unify_types (t1,t3); unify_types(t2,t4)
-      | Ref_type t1, Ref_type t2 ->  failwith "no"
+      | Ref_type t1, Ref_type t2 ->  unify_types (t1,t2)
       | _ ->  raise(Type_error(Clash(lt1,lt2)))
-
 
 let type_const = function
    Int _ -> Const_type Int_type
@@ -129,33 +122,12 @@ let type_const = function
  | String _ -> Const_type String_type
  | Bool _ ->  Const_type Bool_type
  | Unit ->  Const_type Unit_type
- | Emptylist -> List_type (new_unknown()) 
+ | Emptylist -> List_type (new_unknown())
 
-
-
-let isExpansive = function
-  | App (_,_) | Ref _ -> true
-  | _  -> false
-
-(**
- let type_instance st =
-   match st with Forall(gv,t)  ->
-   let unknowns = List.map (function n -> n,new_unknown()) gv
-   in
-     let rec instance t  = match t with
-         Var_type (vt) as tt ->
-           ( match !vt with
-               Unknown n ->(try List.assoc n unknowns with Not_found -> tt)
-             | Instanciated ti -> instance ti
-           )
-       | Const_type tc  -> t
-       | List_type t1 -> List_type (instance t1)
-       | Fun_type (t1,t2) -> Fun_type (instance t1, instance t2)
-       | Pair_type (t1,t2) -> Pair_type (instance t1, instance t2)
-       | Ref_type t1 -> Ref_type (instance t1)
-     in
-       instance t
-**)
+let isExpansive expr =
+  match expr with
+  | App (_,_) | Ref _ -> failwith "expansive"; true
+  | _  -> failwith "non-expansive" ;false
 
 let generalize_types gamma l =
    let fvg = free_vars_of_type_env gamma
@@ -163,93 +135,94 @@ let generalize_types gamma l =
      List.map (function (s,t) ->
                 (s, Forall(free_vars_of_type (fvg,t),t))) l
  
-
-
 let rec type_expr gamma =
-   let rec type_rec expri = 
+   let rec type_rec expri generalisation = 
      match expri with
-         Const c -> type_const c
-       | Var s -> let t = try List.assoc s gamma
-          with Not_found -> raise (Type_error(Unbound_var s))
-          in  type_instance t
-       | Unop (s,e) ->
-           let t = try assoc s gamma
-                   with Not_found -> raise (Type_error(Unbound_var s))
-           in 
-	   let t1 = type_instance t
-           and t2 = type_rec e in
-           let u = new_unknown()
-           in
-	   (match s with 
-           | "!" ->
- 	     if (is_non_expansive e) 
-	     then type_rec e
-	     else (failwith "tout va mal")
-           | _ -> unify_types(t1, Fun_type(t2,u)); u)
-	     
-       | Binop(s,e1,e2) ->
-          let t = try assoc s gamma
-                  with Not_found -> raise (Type_error(Unbound_var s))
-          in
-            let t0 = type_instance t
-            and t1 = type_rec e1
-            and t2 = type_rec e2
-            in
-              let u = new_unknown()
-              and v = new_unknown()
-              in
-                unify_types(t0, Fun_type(Pair_type (t1,t2),u)); u
-
-
-       | Pair (e1,e2) -> Pair_type (type_rec e1, type_rec e2) 
-       | Cons (e1,e2) ->
-           let t1 = type_rec e1
-           and t2 = type_rec e2 in
-             unify_types (List_type t1, t2); t2
-       | Cond (e1,e2,e3) ->
-           let t1 = unify_types (Const_type Bool_type, type_rec e1)
-           and t2 = type_rec e2
-           and t3 = type_rec e3 in 
-             unify_types (t2,t3); t2
-       | App (e1,e2) ->
-           let t1 = type_rec e1
-           and t2 = type_rec e2 in
-             let u = new_unknown() in
-               unify_types (t1, Fun_type (t2,u)); u
-       | Abs(s,e) ->
-           let t = new_unknown() in
+       Const c -> type_const c
+     | Var s -> let t = try List.assoc s gamma
+       with Not_found -> raise (Type_error(Unbound_var s))
+		in  type_instance t
+     | Unop (s,e) ->
+       let t = try assoc s gamma
+         with Not_found -> raise (Type_error(Unbound_var s))
+       in 
+       let t1 = type_instance t
+       and t2 = type_rec e generalisation in
+       let u = new_unknown()
+       in
+       unify_types(t1, Fun_type(t2,u)); u
+	 
+     | Binop(s,e1,e2) ->
+       let t = try assoc s gamma
+         with Not_found -> raise (Type_error(Unbound_var s))
+       in
+       let t0 = type_instance t
+       and t1 = type_rec e1 generalisation
+       and t2 = type_rec e2 generalisation
+       in
+       let u = new_unknown()
+       and v = new_unknown()
+       in
+       unify_types(t0, Fun_type(Pair_type (t1,t2),u));
+       u
+	 
+     | Pair (e1,e2) -> Pair_type (type_rec e1 generalisation, type_rec e2 generalisation)
+     | Cons (e1,e2) ->
+       let t1 = type_rec e1 generalisation
+       and t2 = type_rec e2 generalisation in
+       unify_types (List_type t1, t2); t2
+     | Cond (e1,e2,e3) ->
+       let t1 = unify_types (Const_type Bool_type, type_rec e1 generalisation)
+       and t2 = type_rec e2 generalisation
+       and t3 = type_rec e3 generalisation in 
+       unify_types (t2,t3); t2
+     | App (e1,e2) ->
+       let t1 = type_rec e1 generalisation
+       and t2 = type_rec e2 generalisation in
+       let u = new_unknown() in
+       unify_types (t1, Fun_type (t2,u)); u
+     | Abs(s,e) ->
+       let t = new_unknown() in
              let new_env = (s,Forall ([],t))::gamma in
-               Fun_type (t, type_expr new_env e)
-       | Letin (false,s,e1,e2) -> 
-	 let t1 = type_rec e1 in
-         if  not (isExpansive e2) then 
-           let new_env = generalize_types gamma [ (s,t1) ] in
-           type_expr (new_env@gamma) e2
-         else 
-           type_expr ((s,(Forall([],t1))) :: gamma) e2	     
-
-       | Letin (true,s,e1,e2) -> 
+             Fun_type (t, type_expr new_env e generalisation)
+     | Letin (false,s,e1,e2) ->
+	 (* let s = e1 in e2 *)
+	 (* false pour non récursive *)
+       let t1 = type_rec e1 generalisation in
+       if  not (isExpansive e1) then 
+         let new_env = generalize_types gamma [ (s,t1) ] in
+         type_expr (new_env@gamma) e2 generalisation
+       else
+	 begin
+           type_expr ((s,(Forall([],t1))) :: gamma) e2 generalisation 
+	 end
+     | Letin (true,s,e1,e2) -> 
+	   (* true pour recursive *)
            let u = new_unknown () in
-             let new_env = (s,Forall([  ],u))::gamma in
-               let t1 = type_expr (new_env@gamma) e1 in
-                 let final_env = generalize_types gamma [ (s,t1) ] in
-                   type_expr (final_env@gamma) e2
-       | Ref e -> Ref_type (type_rec e)
+           let new_env = (s,Forall([  ],u))::gamma in
+           let t1 = type_expr (new_env@gamma) e1 generalisation in
+           if  not (isExpansive e1) then 
+	     let new_env = generalize_types gamma [ (s,t1) ] in
+	     type_expr (new_env@gamma) e2 generalisation
+           else
+	     begin
+               type_expr ((s,(Forall([],t1))) :: gamma) e2 generalisation
+	     end
+     | Ref e -> Ref_type (type_rec e generalisation)
    in
-     type_rec
+   type_rec
+     
+(*************************** Printing **************************************)
 
-
-
-let print_consttype = function 
+(*let print_consttype = function 
   Int_type -> print_string   "int"
 | Float_type -> print_string "float"
 | String_type -> print_string "string"
 | Bool_type -> print_string "bool"
 | Unit_type -> print_string "unit"
+*)
+let ascii i = let s = String.create 1 in s.[0] <- Char.chr  i;s
 
-
-
-let ascii i = let s = String.create 1 in s.[0] <- Char.chr  i;s 
 let var_name n = 
   let rec name_of n = 
      let q,r = ((n / 26), (n mod 26))
@@ -258,14 +231,25 @@ let var_name n =
         else (name_of q)^(ascii (96+r))
    in "'"^(name_of n)
 
+let weakvar_name n = 
+  let rec name_of n = 
+     let q,r = ((n / 26), (n mod 26))
+     in 
+        if q=0 then ascii (96+r)
+        else (name_of q)^(ascii (96+r))
+   in "'_"^(name_of n)
 
+let get_name t n =
+  match t with
+  |  Var_type {contents=(Weak _)} -> weakvar_name n 
+  | _ -> var_name n
 
-
+(*
 let print_quantified_type (Forall(gv,t)) = 
   let names = 
     let rec names_of = function
       (n,[]) -> []
-    | (n,(v1::lv)) -> (var_name n)::(names_of (n+1,lv))
+    | (n,(v1::lv)) -> (get_name t n)::(names_of (n+1,lv))
     in (names_of (1,gv))
   in 
     let var_names = combine (rev gv) names
@@ -273,6 +257,10 @@ let print_quantified_type (Forall(gv,t)) =
       let rec print_rec = function 
          Var_type {contents=(Instanciated t)} -> print_rec t 
       |  Var_type {contents=(Unknown n)} -> 
+           let name = (try assoc n var_names 
+                       with Not_found -> raise (Failure "Non quantified variable in type"))
+           in print_string name
+      |  Var_type {contents=(Weak n)} -> 
            let name = (try assoc n var_names 
                        with Not_found -> raise (Failure "Non quantified variable in type"))
            in print_string name
@@ -287,23 +275,17 @@ let print_quantified_type (Forall(gv,t)) =
         print_rec t
 
 
-
-
 let print_type t = print_quantified_type (Forall(free_vars_of_type ([],t),t))
 
-
+*)
 
 let typing_handler typing_fun env expr = 
   reset_unknowns();
   try typing_fun env expr 
   with 
     Type_error (Clash(lt1,lt2)) -> 
-        print_string  "Type clash between ";print_type lt1;
-        print_string " and ";print_type lt2; print_newline();
         failwith "type_check"
   | Type_error (Unbound_var s)  ->
-        prerr_string "Unbound variable ";
-        prerr_endline s;
         failwith "type_check"
 
 (*
