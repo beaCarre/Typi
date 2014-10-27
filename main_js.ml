@@ -6,31 +6,12 @@ open Typeur
 open Env_typeur
 open Jstool
 
-exception Endhist
-
-type zippo = {mutable cmds: string list
-	     ; mutable idx: int
-	     ; mutable size: int}
-
-let hist_plus_idx h = 
-  h.idx <- min (h.size - 1) (h.idx + 1)
-
-let hist_moins_idx h = 
-  if h.idx <= 0 then begin h.idx <- -1; raise Endhist end
-  else h.idx <- max 0 (h.idx - 1)
-
-let addEntry historique entry = 
-  if historique.cmds = [] then historique.cmds <- [entry]
-  else historique.cmds <- entry::historique.cmds;
-  historique.size <- historique.size + 1
-
-let historique = {cmds=[]; idx=0; size=1}
+let historique = ref (History.init ())
 
 let go_type_baby in_console out_console tp = 
   begin try
 	  let entry = readFromTextArea in_console in
-	  addEntry historique entry;
-	  historique.idx <- -1;
+	  historique:=History.add (!historique) entry;
 	  let lexbuf = Lexing.from_string entry in
 	  let l_result = Asyn.start Alex.main lexbuf in
 	  List.iter (function
@@ -101,21 +82,27 @@ let init in_console out_console typeCur =
       let key = evt##keyCode in
       if key=16 then multiline := false;
       let put_historic_value () =
-	let str = List.nth historique.cmds (historique.idx)
-	in
-	in_console##value <- Js.string str
+	try
+	  let str = History.getCurrent (!historique) in
+	  in_console##value <- Js.string str
+	with _ -> ()
       in
+      (* down arrow *)
       if key=40 && !multiline then 
 	begin
 	  try 
-	    hist_moins_idx historique; put_historic_value ()
+	    historique:=History.next (!historique);
+	    put_historic_value ()
 	  with _ -> in_console##value <- Js.string ""
 	end
       ;
+      (* up arrow *)
       if key=38 && !multiline then 
 	begin
-	  hist_plus_idx historique;
-	  put_historic_value ()
+	  try
+	    historique:=History.prev (!historique);
+	    put_historic_value ()
+	  with _ -> ()
 	end
       ;
 
