@@ -5,20 +5,32 @@ open Asyn
 open Typeur
 open Env_typeur
 open Jstool
-open Keyboard
+
+exception Endhist
 
 type zippo = {mutable cmds: string list
 	     ; mutable idx: int
 	     ; mutable size: int}
 
-let historique = {cmds=[]; idx=0; size=0}
+let hist_plus_idx h = 
+  h.idx <- min (h.size - 1) (h.idx + 1)
+
+let hist_moins_idx h = 
+  if h.idx <= 0 then begin h.idx <- -1; raise Endhist end
+  else h.idx <- max 0 (h.idx - 1)
+
+let addEntry historique entry = 
+  if historique.cmds = [] then historique.cmds <- [entry]
+  else historique.cmds <- entry::historique.cmds;
+  historique.size <- historique.size + 1
+
+let historique = {cmds=[]; idx=0; size=1}
 
 let go_type_baby in_console out_console tp = 
   begin try
 	  let entry = readFromTextArea in_console in
-	  historique.cmds <- entry::historique.cmds;
-	  historique.size <- historique.size + 1;
-	  historique.idx <- 0;
+	  addEntry historique entry;
+	  historique.idx <- -1;
 	  let lexbuf = Lexing.from_string entry in
 	  let l_result = Asyn.start Alex.main lexbuf in
 	  List.iter (function
@@ -89,27 +101,20 @@ let init in_console out_console typeCur =
       let key = evt##keyCode in
       if key=16 then multiline := false;
       let put_historic_value () =
-	match historique.idx with
-	| x when x < 0 ->
-	  historique.idx <- -1;
-	  in_console##value <- Js.string ""
-	| x when x > historique.size - 1 ->
-	  historique.idx <- historique.size;
-	  in_console##value <- Js.string ""
-	| x -> let str = 
-		 List.nth historique.cmds (historique.size - 1 - x)
-	       in
-	       in_console##value <- Js.string str
+	let str = List.nth historique.cmds (historique.idx)
+	in
+	in_console##value <- Js.string str
       in
       if key=40 && !multiline then 
 	begin
-	  historique.idx <- historique.idx - 1;
-	  put_historic_value ()
+	  try 
+	    hist_moins_idx historique; put_historic_value ()
+	  with _ -> in_console##value <- Js.string ""
 	end
       ;
       if key=38 && !multiline then 
 	begin
-	  historique.idx <- historique.idx + 1;
+	  hist_plus_idx historique;
 	  put_historic_value ()
 	end
       ;
