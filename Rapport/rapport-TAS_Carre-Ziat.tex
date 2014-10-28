@@ -1,0 +1,431 @@
+\documentclass[a4paper, 11pt]{article}
+\addtolength{\hoffset}{-1cm}
+\addtolength{\textwidth}{2cm}
+\usepackage[utf8]{inputenc}
+\usepackage[frenchb]{babel}
+\usepackage[T1]{fontenc}
+
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{proof}
+
+
+
+\usepackage{color}
+\definecolor{lightgray}{rgb}{.9,.9,.9}
+\definecolor{darkgray}{rgb}{.5,.2,.2}
+\definecolor{purple}{rgb}{0.65, 0.12, 0.82}
+\definecolor{brown}{RGB}{140, 0, 0}
+
+\lstnewenvironment{OCaml}
+                  {\lstset{
+                      language=[Objective]Caml,
+                      breaklines=true,
+                      showstringspaces=false,
+                      commentstyle=\color{red},
+                      stringstyle=\color{darkgray},
+                      identifierstyle=\ttfamily,
+                      keywordstyle=\color{blue},
+                      escapeinside={/*}{*/},
+                      %xleftmargin=0.08\textwidth
+                    }
+                  }
+                  {}
+\lstnewenvironment{OCamlEx}
+                  {\lstset{
+                      language=[Objective]Caml,
+                      breaklines=true,
+                      showstringspaces=false,
+                      commentstyle=\color{red},
+                      stringstyle=\color{darkgray},
+                      identifierstyle=\ttfamily,
+                      keywordstyle=\color{blue},
+                      basicstyle=\footnotesize,
+                     escapeinside={/*}{*/},
+                      frame=single,
+                      numbers=left,
+                      %xleftmargin=0.08\textwidth
+                    }
+                  }
+                  {}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{\vfill
+  \huge Typi : \\
+  Application web de typage d'un mini-ML foncitonnel et impératif\\
+}
+\author{
+  Béatrice Carré \& Ghiles Ziat\\
+  \emph{Typage et Analyse Statique}\\
+}
+\date{\today\vfill}
+\begin{document}
+
+\begin{titlepage}%ta page de titre
+%les deux logos en haut
+\begin{center}
+\includegraphics[scale=0.6]{typi_logo.jpg}
+\end{center}
+%\includegraphics[width=5cm]{logo2.eps}
+%le reste du titre en plus
+\begin{center}
+  \huge{Typi : \\
+  Application web de typage d'un mini-ML foncitonnel et impératif}\\
+  \ \\
+\Large
+  Béatrice Carré \& Ghiles Ziat\\
+  \emph{Typage et Analyse Statique}\\
+\end{center}
+\tableofcontents
+\end{titlepage} 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%   INTRODUCTION   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+L'idée du projet est d'élaborer une application web de typage d'un mini-ML fonctionnel et impératif. Ce projet sera réalisé en OCaml.
+
+Le contexte du typage sera exposé en première section, puis nous étudierons le langage considéré, comment il est typé, et l'étude de l'ajout de traits impératifs au langage. 
+La dernière partie rentrera un peu plus dans les détails, avec une description de l'application et quelques exemples d'utilisation.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%    1 PROBLEME    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Le typage}
+
+Le typage est l’analyse des programmes visant à associer à chaque expression un type de donnée dans le but de détecter des expressions incohérentes.
+\subsection {Typage statique et dynamique}
+Selon le moment ou l'on type le programme, on peut distinguer plusieurs sortes de typages:\\
+Le typage statique, où la majorité des vérifications de type sont effectuées lors de la compilation.
+Au contraire, on parle de typage dynamique quand ces vérifications sont effectuées durant l'exécution.
+
+\subsection {Typage explicite et implicite}
+On parle de typage explicite lorsque c'est à l'utilisateur d'indiquer lui-même les types qu'il utilise (typiquement lors de la déclaration des variables ou des fonctions).\\
+Au contraire, avec un système de typage implicite, le développeur laisse au compilateur le soin de déterminer tout seul les types de données utilisées, par exemple par inférence.
+
+\subsection {Typage fort et faible}
+Un langage fortement typé est un langage ou l'on peut détecter à la compilation ou à l'exécution des erreurs de typage.
+On y interdit généralement les conversions implicites de types et l'utilisation de mêmes opérateurs pour différents types de données.\\
+Un langage peut être défini par défaut comme faiblement typé s'il ne présente aucune de ces carractéristiques.
+
+\subsection {L'environnement}
+Un environnement de typage est une fonction partielle, des variables du programme vers les types. Plus concrètement:
+pour typer un terme, on lui associe un type. Aussi, dans le cas où le terme contient des variables libres, il devient nécessaire d'avoir une structure dont le rôle est de stocker les types associés à chaque variable : c'est notre environnement.
+
+\subsection {Les langages ML}
+Un langage de la famille ML (Meta Langage) est un langage fonctionnel qui, classiquement, est doté de typage \texttt{statique fort}, et d'\texttt{inférence de type}.
+On retrouve aussi souvent parmi les fonctionnalités d'un langage ML : des types de données algébriques, du filtrage (\emph{Pattern-Matching}), un système efficace de module/interface et un système de gestion d'exception entre autres.
+
+On distingue aussi quelques autres particularités du typage en ML: 
+\begin{itemize}
+\item La liaison des variables libres est statique, c'est à dire que les variables libres sont liées à leurs valeurs d'après le contexte statique. 
+\item La valeur d'une fonction est représentée par une fermeture, qui capture l'état de l'environnement lors de la définition.
+\item Certaines définitions n'imposent pas (ou peu) de contraintes sur le type. Dans ce cas, celui-ci peut-être quelconque. On parle alors de polymorphisme.
+\end{itemize}
+
+Dans le cadre de ce projet nous allons nous intéresser à un mini-langage de type ML.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%      2 IDEE       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Un typeur de mini-ML}
+
+\subsection{mini-ML fonctionnel}
+
+Il peut-être défini par la grammaire suivante :
+\begin{multicols}{2}
+\begin{OCaml}
+Expr: a ::= x
+       | c
+       | unop
+       | binop
+       | fun x -> a 
+       | a/*$_1$*/ a/*$_2$*/ 
+       | (a/*$_1$*/, a/*$_2$*/)
+       | fst a
+       | snd a
+       | if a/*$_1$*/ then a/*$_2$*/ else a/*$_3$*/
+       | let [rec] x = a/*$_1$*/ in a/*$_2$*/
+\end{OCaml}
+
+\noindent
+identificateur (nom de variable)\\
+constante\\
+opération primitive unaire\\
+opération primitive binaire\\
+abstration de fonction\\
+application de fonction\\
+construction d'une paire\\
+projection gauche\\
+projection droite\\
+condition\\
+liaison locale
+\end{multicols}
+\newpage
+avec le système de type suivant :
+\begin{multicols}{2}
+\begin{OCaml}
+Type : /*$\tau$*/ ::= /*$\cal{T}$*/
+            | /*$\alpha$*/
+            | /*$\alpha$*/ list
+            | /*$\tau_1 \rightarrow \tau_2$*/
+            | /*$\tau_1 \times \tau_2$*/
+\end{OCaml}
+\noindent
+type de base ($int$, $float$, $bool$, $string$, $unit$)\\
+variable de type\\
+type de liste\\
+type des fonctions de $\tau_1$ et $\tau_2$\\
+type des paires de $\tau_1$ et $\tau_2$\\
+
+\end{multicols}
+Pour typer ce mini-ML, on suit des règles de typage comme celles-ci (nous en présentons ici que deux, car cela peut s'avérer rébarbatif) :  
+
+\begin{multicols}{2}
+\begin{center}
+$\infer{x:\sigma , C \vdash x : \tau}{}$\ \ avec $\tau = instance(\sigma)$.
+
+$\infer{C \vdash (e_1, e_2) : \tau_1 \times \tau_2}{{C\vdash e_1 : \tau_1\ } {\ C\vdash e_2 : \tau_2}}$
+
+$\infer{}{}$
+\end{center}
+\end{multicols}
+
+
+\subsection{Ajout de traits impératifs}
+
+L'utilisation de pointeur n'est pas naturelle dans la programmation fonctionnelle, mais peut s'avérer très pratique, par exemple, pour traduire un algortihme déjà écrit dans un langage impératif.
+L'ajout des traits impératifs à notre mini-ML engendre les modifications suivantes à la grammaire et au système de type :
+
+\begin{OCaml}
+Expr : a ::= ... | l             /* adresse mémoire */ 
+\end{OCaml}
+\begin{OCaml}
+Type : /*$\tau$*/ ::= ... | /*$\tau$*/ ref
+\end{OCaml}
+
+\noindent
+Nous ajoutons à notre mini-ML les opérateurs suivants :
+\begin{multicols}{2}
+\begin{align*}
+  ref \quad &: \quad \forall \alpha. \; \alpha \times \rightarrow \; ref\\
+  ! \quad &: \quad  \forall \alpha. \; \alpha \; ref \rightarrow \alpha\\
+  := \quad &:  \quad  \forall \alpha. \; \alpha \; ref \times \alpha \rightarrow unit\\
+\end{align*}
+allocation d'un nouveau pointeur
+déréférencement (accès à la valeur pointée)
+affectation (écriture de la zone pointée)
+\end{multicols}
+
+
+Malheureusement, cela conduit à un système de types incorrect avec présence du polymorphisme. (Les mêmes définitions, dans le cadre du $\lambda$-calcul simplement typé conduisent à un système sûr.)
+Considérons le programme suivant :
+\begin{OCaml}
+let r = ref (fun x -> x) in
+   r := (fun x -> x+1);
+  (!r) true
+\end{OCaml}
+Ici, r reçoit le type polymorphe $\forall \alpha. (\alpha \rightarrow \alpha)$. L'affectation sur r est donc bien typée. L'expression ci-dessus est donc bien typée. Pourtant, sa réduction se bloque sur $true+1$ qui n'est ni une valeur, ni réductible.
+
+Pour empêcher ce genre d'erreur, il faut pouvoir s’assurer lors de l’instanciation de cette variable de type, dans une
+application, que l’on ne créera pas de référence.
+Pour cela on différencie les expressions de deux manières : 
+\begin{itemize}
+\item les expressions non expansives incluant principalement les
+variables, les constructeurs et l’abstraction 
+\item et les expressions
+expansives incluant principalement l’application de fonction et l'application de l'opérateur $ref$.
+\end{itemize}
+
+Si l'expression que l'on essaie de typer est expansive, on ne rejette pas de programme, mais on fait en sorte que le type qui y sera associé ne sois pas généralisé. On parle alors de type faible.
+Ces variables de type faible indiquent un type particulier encore inconnu, et pourront être instanciées ultérieurement.
+
+\bigskip
+
+\noindent
+On ajoute aux règles de typage les règles suivantes :
+
+\begin{center}
+$\infer{C \vdash let x = e_1 in e_2 : \tau_2 }{{C\vdash e_1 : \tau_1\quad } {\quad e_1 non expansive\quad } {\quad C;x:Generalize(\tau_1,C)\vdash e_2 : \tau_2}}$
+
+\bigskip
+
+$\infer{C \vdash let x = e_1 in e_2 : \tau_2 }{{C\vdash e_1 : \tau_1\quad } {\quad e_1 expansive\quad } {\quad C;x:\tau_1\vdash e_2 : \tau_2}}$
+\end{center}
+
+Dans l'exemple suivant, typé ainsi:
+\begin{OCamlEx}
+let r = ref [] ;;
+/*val r : '\_a list ref = \{contents=[]\}*/
+\end{OCamlEx}
+la valeur $r$ n'est pas polymorphe, c'est une application. On note le type faible $'\_a$.
+Si on complète l'exemple précédent ainsi :
+\begin{OCamlEx}
+r := ["Typi";"est";"un";"super";"typeur"];;
+/*- : unit = ()*/
+r;;
+/*- : string list ref = \{contents = ["Typi";"est";"un";"super";"typeur"]\}*/
+\end{OCamlEx}
+Le type de $r$ est à présent fixé à \emph{string list ref}, et ne pourra pas être modifié, et l'espression suivante produira une erreur : 
+\begin{OCamlEx}
+r := [true];;
+\end{OCamlEx}
+
+
+
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%   3 REALISATION   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Présentation de Typi}
+
+\subsection{Son fonctionnement}
+Le code de l'application est découpé en deux parties : la partie web, regroupant l'interface graphique et les fonctions annexes de manipulation du DOM, et la partie typage, complètement indépendante, que l'on peut compiler sans js\_of\_OCaml.
+
+La partie typage procède à un phase de \emph{lexing}-\emph{parsing}, d'une chaine de caractère représentant un programme ML, puis construit l'AST correspondant avant de le typer.
+
+\subsection{Interface graphique avec js\_of\_OCaml}
+
+Il est intéressant d'avoir une application interactive, où l'utilisateur peut rentrer une expression pour obtenir son type.
+C'est pour cela que nous avons appelé notre application Typi pour \emph{TYPage Interactif}.
+Nous nous sommes orientés vers une application web, qui ne nécessite pas d'installation particulière au préalable. Pour mettre en oeuvre cette application, notre choix s'est porté vers le langage javascript, de par le fait que l'on dispose d'un outil d'interopérabilité entre celui-ci et OCaml :
+
+js\_of\_ocaml est un compilateur de bytecode OCaml vers javascript. Il rend possible la traduction de programmes OCaml en scripts javascript et l'execution de celui-ci dans un navigateur.
+
+\subsection{Manuel utilisateur}
+
+A l'aide d'une interface à la \emph{try OCaml}, l'utilisateur pourra typer soit directement des expressions à l'aide d'une console soit typer tout un fichier par \emph{drag and drop}\footnote{glisser-déposer}.
+
+La console correspond à un élément \emph{textarea} de HTML5, dont on a modifié la sensibilité à certains évènements pour obtenir un comportement proche d'un \emph{toplevel} classique (sans les inconvénients).
+
+Le résultat du typage des expressions est affiché dans la console, et est ajouté à l'environnement de typage si l'expression correspond à une déclaration. Cet environnement est affiché dans un tableau, associant le nom du terme à son type.
+
+
+
+
+
+\subsection{Exemples d'utilisation}
+
+Pour avoir une idée des possibilités de Typi, voici quelques exemples d'utilisation.
+
+La fonction map,
+\begin{OCamlEx}
+let rec map = fun f -> fun l -> 
+  if l = [] then []
+  else (f (hd l)) :: (map f (tl l))
+ - map : (('a -> 'b) -> (('a list) -> ('b list)))
+\end{OCamlEx}
+
+\newpage
+Un exemple mettant en évidence le typage des références polymorphes.
+\begin{OCamlEx}
+let f = ref (fun a -> a);;
+/*val f : ('\_a -> '\_a) ref = \{contents = <fun>\}*/
+f := (fun x -> x+1);;
+/*- : unit = ()*/
+f;;
+/*- : (int -> int) ref = \{contents = <fun>\}*/
+!f true;;
+/*Error: This expression has type bool but an expression was expected of type
+         int*/
+\end{OCamlEx}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%     CONCLUSION    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Le but de ce projet était de créer un outil de typage d'un langage simple en OCaml, avec une interface web.
+Le typage étant naturel à mettre en place dans le cadre d'un langage purement fonctionnel, ce n'est plus le cas en ajoutant des traits impératifs.
+
+Cette réalisation nous a permis de découvrir le problème des références polymorphes et les solutions généralement mises en oeuvre pour le résoudre.
+
+Typi étant très portbale, on peut penser dans le cadre de travaux futurs, à ajouter certaines constructions au langage, comme le \emph{type somme, l'enregistrement, et le pattern matching}, qui sont des notions dont l'étude du typage peut être intéressante.
+
+
+
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%   BIBLIOGRAPHIE   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section*{Références}
+\addcontentsline{toc}{section}{Bibliographie, références}
+
+Sources : \url{http://www.github.com/beaCarre/Typi}
+
+\begin{thebibliography}{}
+
+\bibitem{DAOC} CHAILLOUX E., MANOURY P., PAGANO B., \emph{Développement
+  d'applications avec Objective Caml}, O'Reilly
+, 2000, (\url{http://www.oreilly.fr/catalogue/ocaml.html})
+
+
+\bibitem{dea_leroy} LEROY X., \emph{} (\url{http://pauillac.inria.fr/~xleroy/dea/typage/cours.pdf})
+
+\bibitem{remy} REMY D. (\url{http://gallium.inria.fr/~remy/isia/3/main.html})
+
+\bibitem{jsofocaml} js\_of\_ocaml, OCSIGEN (\url{http://ocsigen.com/js_of_ocaml})
+
+\bibitem{camlp4} CamlP4 \url{http://pauillac.inria.fr/camlp4/}
+
+
+\end{thebibliography}
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% \begin{tabular}{|l|c|c|c|c|}
+%%   \hline
+%%   \emph{caractéristiques} & \emph{Java} & \emph{OCaml} \\
+%%   \hline
+%%   accès champs & selon la visibilité & via appels de méthode\\\hline
+%%   variables/méthodes statiques & \checkmark & fonctions/décl. globales\\\hline
+%%   typage dynamique & \checkmark & $\times$ \\\hline
+%%   surcharge & \checkmark & $\times$ \\\hline
+%%   héritage multiple & seulement pour les interfaces & \checkmark\\
+%%   \hline
+%% \end{tabular}
+
+%% \section{L'interopérabilité entre OCaml et Java}
+
+%% et les méthodes du module Java\cite{module Java} pour OCaml
+
+%% \begin{figure}[h]
+%%   \centering
+%%   \includegraphics{schema1.pdf}
+%%   \caption{Le travail à effectuer}
+%% \end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%   ANNEXE   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\end{document}
