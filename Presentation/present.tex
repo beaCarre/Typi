@@ -25,6 +25,23 @@
 
 \usepackage[table]{xcolor}
 
+\lstnewenvironment{OCaml}
+                  {\lstset{
+                      language=[Objective]Caml,
+                      breaklines=true,
+                      showstringspaces=false,
+                      commentstyle=\color{red},
+                      stringstyle=\color{darkgray},
+                      identifierstyle=\ttfamily,
+                      basicstyle=\small,
+                      keywordstyle=\color{blue},
+                      escapeinside={/*}{*/},
+                      %xleftmargin=0.08\textwidth
+                    }
+                  }
+                  {}
+
+
 \lstnewenvironment{OCamlEx}
                   {\lstset{
                       language=[Objective]Caml,
@@ -87,91 +104,22 @@
 
 \begin{frame}{Objectif}
 
-\begin{itemize}
-\item \textbf{Intérêt du typage} :
 
-  analyse des programmes visant à associer à chaque expression un type
-de donnée dans le but de détecter des expressions incohérentes
+\begin{block}{Intérêt du typage}
+associer à chaque expression un type dans le but de détecter des incohérences
+\end{block}
 
-\item \textbf{Caractéristiques du typage} : 
-  
+\bigskip
+
+\textbf{Les caractéristiques du typage} : 
+
   \begin{itemize}
-  \item Typage statique et dynamique
-  \item Typage explicite et implicite
-  \item Typage fort et faible
+  \item Typage statique ou dynamique
+  \item Typage explicite ou implicite
+  \item Typage fort ou faible
   \item L'inférence de type
   \end{itemize}
 
-\end{itemize}
-\end{frame}
-
-
-
-
-
-
-
-\begin{frame}{Définition du mini-ML}
-% modèles différents, (exemple : 
-
-\end{frame}
-
-
-
-
-
-\begin{frame}{OCaml-Java : schéma global}
-\begin{figure}[h!]
-  \centering
-  \includegraphics[scale=0.8]{schemaOCamlJava.png}
-\end{figure}
-
-\begin{multicols}{2}
-\begin{itemize}
-\item Compilation vers du bytecode Java
-\item Bibliothèque Java accessible directement
-\item Implémentation d'interface
-\item Portable
-\end{itemize}
-\bigskip
-\begin{itemize}
-\item Syntaxe lourde
-\item Pas de sous-classage
-\end{itemize}
-
-\bigskip
-
-\end{multicols}
-\end{frame}
-
-
-
-
-
-
-
-
-\begin{frame}[fragile]{OCaml-Java : l'accès au monde Java}
-
-  Accès à du code Java grâce à des méthodes définies dans le
-  \textbf{module Java} OCaml pour OCaml-Java.
-
-\bigskip
-
-Exemple d'utilisation :
-
-\begin{OCamlEx}
-let x = Int32.of_int 1
-and y = Int32.of_int 2 in
-let (p : mypack'Point java_instance) = 
-   Java.make "mypack.Point()" ()
-and (p2 : mypack'Point java_instance) = 
-   Java.make "mypack.Point(int,int)" x y 
-in
-   Java.call "mypack.Point.eq(mypack.Point):boolean" p p2
-\end{OCamlEx}
-
-
 
 \end{frame}
 
@@ -182,208 +130,72 @@ in
 
 
 
-\begin{frame}{O'Jacaré : schéma global }
-Version initiale : 2004
 
-Basée sur Camljava (X.Leroy), interface bas-niveau entre OCaml et Java.
+
+
+\begin{frame}{La famille des langage ML}
+Les langages dits ML sont des langages fonctionnels qui (du point de vue du typage) disposent classiquement des fonctionnalités suivantes:
+
+\begin {itemize}
+\item statiquement typés
+\item fortement typés
+\item inférence type 
+\end {itemize}
 \medskip
-\begin{figure}[h]
-  \centering
-  \includegraphics[scale=0.9]{schemaOjacare.png}
-\end{figure}
-\begin{itemize}
-\item
-Génération des classes encapsulantes à partir d'un IDL dans lequel sont décrites les classes Java qu'on veut manipuler.
-\item
-     La \alert{classe encapsulante} générée contient une référence sur un objet Java et permet à l'utilisateur de faire les appels sur celui-ci.
-\end{itemize}
-
+On peut citer Caml, SML etc ...
 \end{frame}
 
 
 
 
-
-
-
-\begin{frame}[fragile]{Exemple : La classe Point (Java)}
+\begin{frame}{Le but du projet}
+Application de typage d'un mini-ML en Ocaml.
+\begin{itemize}
+\item Lexing-Parsing construction d'un AST 
+\item Typage du programme
+\end{itemize}
 \bigskip
 
-\begin{javaEx} 
-  package mypack;
-  public class Point {
-    int x;
-    int y;
-    public Point() { 
-      this.x = 0;
-      this.y = 0;
-    }
-    public Point(int x,int y) {
-      this.x = x;
-      this.y = y;
-    }
-    public void moveto(int x,int y){
-      this.x = x;
-      this.y = y;
-    }
-    public String toString() {
-      return "("+x+","+y+")";
-    }
-    public boolean eq(Point p) {
-      return this.x == p.x  && this.y == p.y;
-    }
-  }
-\end{javaEx}
-
-\end{frame}
-
-
-
-
-
-
-
-
-
-\begin{frame}[fragile]{O'Jacaré exemple : IDL et utilisation}
-  IDL : point.idl
-\begin{idlEx} 
-package mypack;
-
-class Point {
-  int x;
-  int y; 
-  [name default_point] <init> ();
-  [name point] <init> (int,int);
-  void moveto(int,int);
-  [callback]string toString();
-  boolean eq(Point);
-}
-\end{idlEx}
-
-Utilisation : main.ml
-\begin{OCamlEx}
-  open Point
-
-  let p = new default_point () in
-  let p2 = new point 1 1 in
-  p#eq p2
-\end{OCamlEx}
-\end{frame}
-
-
-
-
-
-
-
-
-\begin{frame}{Système de type d'O'Jacaré 2}
-
-Toujours pour la simplicité d'emploi, nous avons défini un système de type différent de \emph{OCaml-Java}.
-
-\begin{figure}\scalebox{0.8}{
-\centering
-
-\begin{tabular}{|l|l|l|}
- \hline
- \rowcolor[gray]{0.8}
- \emph{type Java} &\emph{type OCaml manipulés} &
-\emph{type OCaml} \\ 
-\rowcolor[gray]{0.8}
- & \emph{par OCaml-Java}  & \\
- \hline
-
-  int & int32 & int\\
- \hline
- long & int64 & int\\
- \hline
- java.lang.String & java'lang'String java\_instance & string\\
-
- \hline
- pack.Obj & pack'Obj java\_instance & jObj\\
-
-
- \hline
-\end{tabular}
-}
-\end{figure}
-et un type abstrait unique pour les tableaux :
-
-\begin{figure}\scalebox{0.8}{
-\centering
-\begin{tabular}{|l|l|l|}
- \hline
- \rowcolor[gray]{0.8}
- \emph{type Java} &\emph{type OCaml manipulés} &
-\emph{type OCaml} \\ 
-\rowcolor[gray]{0.8}
- & \emph{par OCaml-Java}  & \emph{pour O'Jacaré}\\
- \hline
-int[] & int32 JavaIntArray & int OjArray.t\\
- \hline
-long[] & int64 JavaLongArray & int OjArray.t\\
- \hline
- java.lang.String[] & java'lang'String java\_instance & string OjArray.t\\
-   & JavaStringArray & \\
- \hline
- pack.Obj[] & pack'Obj java\_instance  & jObj OjArray.t\\
-  & JavaReferenceArray &\\
-
- \hline
-\end{tabular}
-}
-\end{figure}
-
-\end{frame}
-
-
-
-
-
-
-
-
-
-
-
-\begin{frame}[fragile]{Exemple de génération}
-
-\begin{multicols}{2}
+Ajout de traits impératifs (références).
 \begin{itemize}
-\item Définition dans l'IDL :
-\begin{idlEx} 
-package mypack;
-
-class Point {
-  int x;
-  int y; 
-  [name default_point] <init> ();
-  [name point] <init> (int,int);
-  void moveto(int,int);
-  [callback]string toString();
-  boolean eq(Point);
-}
-\end{idlEx}
+\item Typage des références
+\item Typage des références polymorphes
 \end{itemize}
-\begin{figure}[h!]
-  \centering
-  \includegraphics[scale=0.7]{schemaClass.png}
-\end{figure}
+\end{frame}
+
+
+
+
+
+
+\begin{frame}[fragile]{La grammaire de notre mini-ML}
+ \begin{multicols}{2}
+\begin{OCaml}
+Expr: a ::= x
+ | c
+ | unop
+ | binop
+ | fun x -> a 
+ | a/*$_1$*/ a/*$_2$*/ 
+ | (a/*$_1$*/, a/*$_2$*/)
+ | fst a
+ | snd a
+ | if a/*$_1$*/ then a/*$_2$*/ else a/*$_3$*/
+ | let [rec] x = a/*$_1$*/ in a/*$_2$*/
+\end{OCaml}
+\noindent\small
+identificateur (nom de variable)\\
+constante\\
+opération primitive unaire\\
+opération primitive binaire\\
+abstration de fonction\\
+application de fonction\\
+construction d'une paire\\
+projection gauche\\
+projection droite\\
+alternative\\
+liaison locale
 \end{multicols}
-\begin{itemize}
-\item Exemple de code généré :
-% je précise type de java_obj ?
-\begin{OCamlEx}
-class point _p0 _p1 =
-  let _p1 = Int32.of_int _p1
-  in let _p0 = Int32.of_int _p0
-    in let java_obj = Java.make "mypack.Point(int,int)" _p0 _p1
-      in object (self) inherit _capsule_jPoint java_obj end;;
-\end{OCamlEx}
-
-\end{itemize}
-
 \end{frame}
 
 
@@ -395,39 +207,25 @@ class point _p0 _p1 =
 
 
 
-\begin{frame}[fragile]{Le sous-classage avec O'Jacaré 2}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[scale=0.7]{schemaCBClass.png}
-\end{figure}
 
 
-\begin{multicols}{2}
-\begin{idlEx}
- class Point {
-   (*...*)
-   [callback] string toString ();
-   boolean eq (Point);
- }
-\end{idlEx}
 
-\bigskip
-\begin{OCamlEx}
-class ocamlPoint ()  =
-  object
-    inherit _stub_point x y as super
-    method toString() = "caml"^(super#toString());
-  end
-\end{OCamlEx}
-\end{multicols}
-
+\begin{frame}{}
 
 \end{frame}
+
+
+
+
+
+
+
+
+
 
 
 \begin{frame}{Application}
-TODO example ojdvi
+TODO example
 \end{frame}
 
 
@@ -486,116 +284,6 @@ Merci à l'IRILL, G. Henry, X. Clerc, E. Chailloux.
 
   \end{thebibliography}
 \end{frame}
-
-
-
-
-
-
-
-
-
-
-\begin{frame}[fragile]{Annexe 1 : Module Java de OCaml}
-\scalebox{0.8}{
-\begin{tabular}{|l|l|}
-  \hline
-  \emph{types OCaml-Java} & \emph{descriptions et exemples} \\\hline
-  java\_instance & référence sur une instance Java  \\
-  \hline
-  java\_constructor & signature d'un constructeur  \\
-  &  "java.lang.Object()" \\
-  \hline
-  java\_method & signature d'une méthode \\
-  & "java.lang.String.lastIndexOf(String):int"\\
-  \hline
-  java\_field\_get & signature d'un attribut\\
-  & "mypack.Point.x:int" \\
-  \hline
-  java\_field\_set & signature d'un attribut\\
-  & "mypack.Point.x:int" \\
-  \hline
-  java\_type & classe, interface ou type Array\\
-  & "java.lang.String"\\
-  \hline
-\end{tabular}
-}
-\begin{OCamlEx}
-/*\textbf{make}*/ : 'a java_constructor -> 'a 
-/*\textbf{call}*/ : 'a java_method -> 'a 
-/*\textbf{get}*/ : 'a java_field_get -> 'a 
-/*\textbf{set}*/ : 'a java_field_set -> 'a 
-/*\textbf{is\_null}*/ : 'a java_instance -> bool 
-/*\textbf{instanceof}*/ : 'a java_type -> 'b java_instance -> bool
-/*\textbf{cast}*/ : 'a java_type -> 'b java_instance -> 'a
-\end{OCamlEx}
-\end{frame}
-
-
-
-
-
-
-
-
-\begin{frame}[fragile]{Annexe 2 : Module \emph{OjArray}}
-\begin{OCamlEx}
-(** type abstrait 'a t d'encapsulation des tableaux ocamljava *)
-type 'a t 
-
-(** type abstrait 'a t d'encapsulation des tableaux ocamljava *)
-val get: 'a t -> int -> 'a
-val set: 'a t -> int -> 'a -> unit
-val length: 'a t -> int
-
-(** Fonctions d'empaquetage des tableaux de reference ocamljava *)
-type refA = 
-| RefA : 'b java_reference_array -> refA
-
-val pack_reference_array: < .. > t -> refA
-
-(** Fonctions d'encapsulation des tableaux ocamljava *)
-val wrap_boolean_array: bool java_boolean_array -> bool t
-val wrap_char_array: int java_char_array -> char t
-val wrap_byte_array: int java_byte_array -> int t
-val wrap_double_array: float java_double_array -> float t
-val wrap_float_array: float java_float_array -> float t
-val wrap_int_array: int32 java_int_array -> int t
-val wrap_long_array: int64 java_long_array -> int t
-val wrap_short_array: int java_short_array -> int t
-val wrap_string_array: java'lang'String java_instance java_reference_array -> string t
-val wrap_reference_array: 'a java_reference_array -> 
-     ((< .. > as 'b) -> 'a) -> ('a -> 'b) -> 'b t
-\end{OCamlEx}
-\end{frame}
-
-\begin{frame}[fragile]{Annexe 2 : Module \emph{OjArray} (2)}
-\begin{OCamlEx}
-(** Fonctions d'encapsulation des tableaux de type 'a t *)
-val unwrap_boolean_array: bool t -> bool java_boolean_array
-val unwrap_char_array: char t -> int java_char_array
-val unwrap_byte_array: int t -> int java_byte_array
-val unwrap_double_array: float t -> float java_double_array
-val unwrap_float_array: float t -> float java_float_array
-val unwrap_int_array: int t -> int32 java_int_array
-val unwrap_long_array: int t -> int64 java_long_array  
-val unwrap_short_array: int t -> int java_short_array
-val unwrap_string_array: string t -> java'lang'String java_instance java_reference_array
-
-(** Fonctions de creation de tableaux de type 'a t *)
-val _new_boolean_array: int -> bool t
-val _new_byte_array: int -> int t
-val _new_char_array: int -> char t
-val _new_double_array: int -> float t
-val _new_float_array: int -> float t
-val _new_int_array: int -> int t
-val _new_long_array: int -> int t
-val _new_short_array: int -> int t
-val _new_string_array: int -> string t
-\end{OCamlEx}
-\end{frame}
-
-
 
 
 
