@@ -35,7 +35,7 @@ let rec vars_of_type t =
    | Fun_type (t1,t2) -> vars (vars vl t1) t2
    | Ref_type t -> vars vl t
    in
-     vars [] t 
+     vars [] t
 
 let subtract l1 l2 =
    List.flatten (List.map (function id ->
@@ -191,7 +191,7 @@ let rec type_expr gamma =
      | Abs(s,e) ->
        let t = if generalisation then new_unknown() else new_weak() in
        let new_env = (s,Forall ([],t))::gamma in
-       Fun_type (t, type_expr new_env e false)
+       Fun_type (t, type_expr new_env e generalisation)
 
      | Letin (false,s,e1,e2) ->
 	 (* let s = e1 in e2 *)
@@ -207,15 +207,10 @@ let rec type_expr gamma =
      | Letin (true,s,e1,e2) -> 
 	   (* true pour recursive *)
            let u = new_unknown () in
-           let new_env = (s,Forall([  ],u))::gamma in
-           let t1 = type_expr (new_env@gamma) e1 generalisation in
-           if  not (isExpansive e1) then 
-	     let new_env = generalize_types gamma [ (s,t1) ] in
-	     type_expr (new_env@gamma) e2 generalisation
-           else
-	     begin
-               type_expr ((s,(Forall([],t1))) :: gamma) e2 generalisation
-	     end
+             let new_env = (s,Forall([  ],u))::gamma in
+               let t1 = type_expr (new_env@gamma) e1 generalisation in
+                 let final_env = generalize_types gamma [ (s,t1) ] in
+                   type_expr (final_env@gamma) e2 generalisation
 
      | Ref e -> Ref_type (type_rec e false)
    in
