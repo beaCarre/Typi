@@ -51,7 +51,7 @@
                       stringstyle=\color{darkgray},
                       identifierstyle=\ttfamily,
                       keywordstyle=\color{blue},
-                      basicstyle=\tiny,
+                      basicstyle=\scriptsize,
                       escapeinside={/*}{*/},
                       frame=single,
                       %xleftmargin=0.08\textwidth
@@ -139,7 +139,7 @@ Les langages dits ML sont des langages fonctionnels qui (du point de vue du typa
 \begin {itemize}
 \item statiquement typés
 \item fortement typés
-\item inférence type 
+\item inférence des types 
 \end {itemize}
 \medskip
 On peut citer Caml, SML etc ...
@@ -210,7 +210,29 @@ liaison locale
 
 
 
-\begin{frame}{}
+\begin{frame}[fragile]{Le système de type}
+
+avec le système de type suivant :
+\begin{multicols}{2}
+\begin{OCaml}
+Type : /*$\tau$*/ ::= /*$\cal{T}$*/
+
+            | /*$\alpha$*/
+            | /*$\alpha$*/ list
+            | /*$\tau_1 \rightarrow \tau_2$*/
+            | /*$\tau_1 \times \tau_2$*/
+
+\end{OCaml}
+
+\noindent
+\small type de base ($int$, $float$, $bool$, $string$, $unit$)\\
+variable de type\\
+type de liste\\
+type des fonctions de $\tau_1$ et $\tau_2$\\
+type des paires de $\tau_1$ et $\tau_2$\\
+
+\end{multicols}
+
 
 \end{frame}
 
@@ -223,29 +245,134 @@ liaison locale
 
 
 
+\begin{frame}[fragile]{Ajout de traits impératifs}
+\begin{block}{Grammaire et système de type}
+\begin{OCaml}
+Expr : a ::= ... | l      /* adresse mémoire */ 
+\end{OCaml}
+\begin{OCaml}
+Type : /*$\tau$*/ ::= ... | /*$\tau$*/ ref
+\end{OCaml}
+\end{block}
+\pause
 
-\begin{frame}{Application}
-TODO example
+Opérateurs :
+\begin{align*}
+  ref \quad &: \quad \forall \alpha. \; \alpha \times \rightarrow \; ref  &\textrm{allocation}\\
+  ! \quad &: \quad  \forall \alpha. \; \alpha \; ref \rightarrow \alpha  &\textrm{déréférencement}\\
+  := \quad &:  \quad  \forall \alpha. \; \alpha \; ref \times \alpha \rightarrow unit  &\textrm{affectation}\\
+\end{align*}
+\end{frame}
+
+
+
+
+
+\begin{frame}[fragile]{Les références polymorphes}
+Considérons l'exemple :
+\begin{center}
+\begin{OCaml}
+let r = ref (fun x -> x) in
+   r := (fun x -> x+1);
+  (!r) true
+\end{OCaml}
+\end{center}
+
+\begin{itemize}
+\pause
+\item r reçoit $\forall \alpha. (\alpha \rightarrow \alpha)$
+\pause
+\item l'affectation sur r est bien typée
+\pause
+\item bloque sur $true+1$
+\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}
+
+\begin{block}{Une solution}
+S’assurer que l’on ne créera pas de référence dans une application. 
+\end{block}
+
+\bigskip
+
+\begin{itemize}
+\pause
+\item \textbf{Expression non-expansive} : variables, constructeurs, abstraction... 
+\pause
+\bigskip
+\item \textbf{Expression expansive} : application de fonction et application de $ref$
+\end{itemize}
+\end{frame}
+
+
+
+
+
+
+\begin{frame}[fragile]{Les types faibles}
+
+\begin{block}{Type faible}
+Si l'expression est expansive, on ne généralise pas les types.
+\end{block} 
+\begin{itemize}
+\item Indiquent un type particulier encore inconnu
+\item pourront être instanciées ultérieurement.
+\end{itemize}
+
+
+\begin{OCamlEx}
+type vartype = 
+  Unknown of int
+| Weak of int
+| Instanciated of ml_type
+\end{OCamlEx}
+
+\end{frame}
+
+\begin{frame}[fragile]{Exemple de type faible}
+\begin{OCamlEx}
+let f = ref (fun a -> a);;
+/*val f : ('\_a -> '\_a) ref = \{contents = <fun>\}*/
+\end{OCamlEx}
+\pause
+\begin{OCamlEx}
+f := (fun x -> x+1);;
+/*- : unit = ()*/
+\end{OCamlEx}
+\pause
+\begin{OCamlEx}
+f;;
+/*- : (int -> int) ref = \{contents = <fun>\}*/
+\end{OCamlEx}
+\pause
+\begin{OCamlEx}
+!f true;;
+/*Error: This expression has type bool but an expression was expected of type int*/
+\end{OCamlEx}
+\end{frame}
+
+\begin{frame}{Typi}
+TODO example impr
 \end{frame}
 
 
 \begin{frame}{Conclusion}
 
-O'Jacaré 2 :
+Typi :
 \begin{itemize}
-\item Accès simple à du code Java ou à l'API
-\item Accès utilisateur transparent grâce aux classes encapsulantes
-\item Gestion des tableaux simplifiée
-\item Plus de possibilités grâce au sous-classage
+\item 
 \end{itemize}
 
 Travaux futurs:
 \begin{itemize}
-\item Faire un paquet OPAM
-\item Terminer la doc/manuel utilisateur
+\item Gestion du typage explicite
+
+\item Ajout de nouveaux traits (pattern matching, types somme ...)
 \end{itemize}
-\bigskip
-Merci à l'IRILL, G. Henry, X. Clerc, E. Chailloux.
+
 \end{frame}
 
 
@@ -266,22 +393,14 @@ Merci à l'IRILL, G. Henry, X. Clerc, E. Chailloux.
     d'applications avec Objective Caml}, O'Reilly
     , 2000
 
-  \bibitem{}  HENRY G., \emph{O’Jacaré} \url{http://www.pps.univ-paris-diderot.fr/~henry/ojacare/}
 
-  \bibitem{}  CLERC X.,\emph{OCaml-Java 2.0} \url{http://ocamljava.x9c.fr/preview/}
+\bibitem{dea_leroy} LEROY X., \emph{} (\url{http://pauillac.inria.fr/~xleroy/dea/typage/cours.pdf})
 
-  \bibitem{} CHAILLOUX E., HENRY G., \emph{O’Jacaré, une interface objet
-    entre Objective Caml et Java}, 2004
+\bibitem{remy} REMY D. (\url{http://gallium.inria.fr/~remy/isia/3/main.html})
 
-  \bibitem{} CLERC X., \emph{OCaml-Java: Typing Java Accesses from OCaml
-    Programs}, Trends in Functional Programming, Lecture Notes in
-    Computer Science Volume 7829,
-    2013
+\bibitem{jsofocaml} js\_of\_ocaml, OCSIGEN (\url{http://ocsigen.com/js_of_ocaml})
 
-  \bibitem{camljava} LEROY X., \emph{The camljava project},
-
-  \bibitem{module Java} CLERC X.,\emph{OCaml-java : module Java} \href{http://ocamljava.x9c.fr/preview/javalib/index.html}{lien}
-
+\bibitem{camlp4} CamlP4 \url{http://pauillac.inria.fr/camlp4/}
   \end{thebibliography}
 \end{frame}
 
