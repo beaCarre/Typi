@@ -1,0 +1,414 @@
+\documentclass[xcolor={table,dvipsnames}]{beamer}
+
+\usetheme{Warsaw}
+
+\usepackage[utf8]{inputenc}
+\usepackage[frenchb]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{multicol}
+
+\usepackage{graphicx}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+\pdfcompresslevel1
+
+\newcommand{\camljava}{{\tt{camljava}}}
+
+\usepackage{listings}
+\usepackage{color}
+\definecolor{darkgray}{rgb}{.5,.2,.2}
+\definecolor{darkred}{rgb}{.8,.0,.0}
+
+\usepackage[table]{xcolor}
+
+\lstnewenvironment{OCaml}
+                  {\lstset{
+                      language=[Objective]Caml,
+                      breaklines=true,
+                      showstringspaces=false,
+                      commentstyle=\color{red},
+                      stringstyle=\color{darkgray},
+                      identifierstyle=\ttfamily,
+                      basicstyle=\small,
+                      keywordstyle=\color{blue},
+                      escapeinside={/*}{*/},
+                      %xleftmargin=0.08\textwidth
+                    }
+                  }
+                  {}
+
+
+\lstnewenvironment{OCamlEx}
+                  {\lstset{
+                      language=[Objective]Caml,
+                      breaklines=true,
+                      showstringspaces=false,
+                      commentstyle=\color{darkred},
+                      stringstyle=\color{darkgray},
+                      identifierstyle=\ttfamily,
+                      keywordstyle=\color{blue},
+                      basicstyle=\scriptsize,
+                      escapeinside={/*}{*/},
+                      frame=single,
+                      %xleftmargin=0.08\textwidth
+                    }
+                  }
+                  {}
+
+
+\addtobeamertemplate{footline}{\hfill\insertframenumber/\inserttotalframenumber
+
+\hspace{10em}\\}
+
+\usepackage{listings}
+
+\title{Typi : Application web de typage d'un mini-ML fonctionnel et impératif}
+\author{Béatrice Carré \& Ghiles Ziat}
+\institute{Projet de Typage et Analyse Statique}
+\date{\today}
+\titlegraphic{
+
+   \includegraphics[scale=.4]{typi_logo.jpg}
+   }
+
+% slides number
+\defbeamertemplate*{footline}{shadow theme}
+{%
+  \leavevmode%
+  \hbox{
+    \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm plus1fil,rightskip=.3cm]{author in head/foot}%
+    \usebeamerfont{author in head/foot}\insertframenumber\,/\,\inserttotalframenumber\hfill\insertshortauthor
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm,rightskip=.3cm plus1fil]{}%
+    \usebeamerfont{title in head/foot}\insertshorttitle%
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+
+\beamertemplatenavigationsymbolsempty
+
+
+\begin{document}
+
+\maketitle
+
+
+
+
+
+
+
+\begin{frame}{Objectif}
+
+
+\begin{block}{Intérêt du typage}
+associer à chaque expression un type dans le but de détecter des incohérences
+\end{block}
+
+\bigskip
+
+\textbf{Les caractéristiques du typage} : 
+
+  \begin{itemize}
+  \item Typage statique ou dynamique
+  \item Typage explicite ou implicite
+  \item Typage fort ou faible
+  \item L'inférence de type
+  \end{itemize}
+
+
+\end{frame}
+
+
+
+
+
+
+
+
+
+
+
+\begin{frame}{La famille des langage ML}
+Les langages dits ML sont des langages fonctionnels qui (du point de vue du typage) disposent classiquement des fonctionnalités suivantes:
+
+\begin {itemize}
+\item statiquement typés
+\item fortement typés
+\item inférence des types 
+\end {itemize}
+\medskip
+On peut citer Caml, SML etc ...
+\end{frame}
+
+
+
+
+\begin{frame}{Le but du projet}
+Application de typage d'un mini-ML en Ocaml.
+\begin{itemize}
+\item Lexing-Parsing construction d'un AST 
+\item Typage du programme
+\end{itemize}
+\bigskip
+
+Ajout de traits impératifs (références).
+\begin{itemize}
+\item Typage des références
+\item Typage des références polymorphes
+\end{itemize}
+\end{frame}
+
+
+
+
+
+
+\begin{frame}[fragile]{La grammaire de notre mini-ML}
+ \begin{multicols}{2}
+\begin{OCaml}
+Expr: a ::= x
+ | c
+ | unop
+ | binop
+ | fun x -> a 
+ | a/*$_1$*/ a/*$_2$*/ 
+ | (a/*$_1$*/, a/*$_2$*/)
+ | fst a
+ | snd a
+ | if a/*$_1$*/ then a/*$_2$*/ else a/*$_3$*/
+ | let [rec] x = a/*$_1$*/ in a/*$_2$*/
+\end{OCaml}
+\noindent\small
+identificateur (nom de variable)\\
+constante\\
+opération primitive unaire\\
+opération primitive binaire\\
+abstration de fonction\\
+application de fonction\\
+construction d'une paire\\
+projection gauche\\
+projection droite\\
+alternative\\
+liaison locale
+\end{multicols}
+\end{frame}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{frame}[fragile]{Le système de type}
+
+avec le système de type suivant :
+\begin{multicols}{2}
+\begin{OCaml}
+Type : /*$\tau$*/ ::= /*$\cal{T}$*/
+
+            | /*$\alpha$*/
+            | /*$\alpha$*/ list
+            | /*$\tau_1 \rightarrow \tau_2$*/
+            | /*$\tau_1 \times \tau_2$*/
+
+\end{OCaml}
+
+\noindent
+\small type de base ($int$, $float$, $bool$, $string$, $unit$)\\
+variable de type\\
+type de liste\\
+type des fonctions de $\tau_1$ et $\tau_2$\\
+type des paires de $\tau_1$ et $\tau_2$\\
+
+\end{multicols}
+
+
+\end{frame}
+
+
+
+
+
+
+
+
+
+
+\begin{frame}[fragile]{Ajout de traits impératifs}
+\begin{block}{Grammaire et système de type}
+\begin{OCaml}
+Expr : a ::= ... | l      /* adresse mémoire */ 
+\end{OCaml}
+\begin{OCaml}
+Type : /*$\tau$*/ ::= ... | /*$\tau$*/ ref
+\end{OCaml}
+\end{block}
+\pause
+
+Opérateurs :
+\begin{align*}
+  ref \quad &: \quad \forall \alpha. \; \alpha \times \rightarrow \; ref  &\textrm{allocation}\\
+  ! \quad &: \quad  \forall \alpha. \; \alpha \; ref \rightarrow \alpha  &\textrm{déréférencement}\\
+  := \quad &:  \quad  \forall \alpha. \; \alpha \; ref \times \alpha \rightarrow unit  &\textrm{affectation}\\
+\end{align*}
+\end{frame}
+
+
+
+
+
+\begin{frame}[fragile]{Les références polymorphes}
+Considérons l'exemple :
+\begin{center}
+\begin{OCaml}
+let r = ref (fun x -> x) in
+   r := (fun x -> x+1);
+  (!r) true
+\end{OCaml}
+\end{center}
+
+\begin{itemize}
+\pause
+\item r reçoit $\forall \alpha. (\alpha \rightarrow \alpha)$
+\pause
+\item l'affectation sur r est bien typée
+\pause
+\item bloque sur $true+1$
+\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}
+
+\begin{block}{Une solution}
+S’assurer que l’on ne créera pas de référence dans une application. 
+\end{block}
+
+\bigskip
+
+\begin{itemize}
+\pause
+\item \textbf{Expression non-expansive} : variables, constructeurs, abstraction... 
+\pause
+\bigskip
+\item \textbf{Expression expansive} : application de fonction et application de $ref$
+\end{itemize}
+\end{frame}
+
+
+
+
+
+
+\begin{frame}[fragile]{Les types faibles}
+
+\begin{block}{Type faible}
+Si l'expression est expansive, on ne généralise pas les types.
+\end{block} 
+\begin{itemize}
+\item Indiquent un type particulier encore inconnu
+\item pourront être instanciées ultérieurement.
+\end{itemize}
+
+
+\begin{OCamlEx}
+type vartype = 
+  Unknown of int
+| Weak of int
+| Instanciated of ml_type
+\end{OCamlEx}
+
+\end{frame}
+
+\begin{frame}[fragile]{Exemple de type faible}
+\begin{OCamlEx}
+let f = ref (fun a -> a);;
+/*val f : ('\_a -> '\_a) ref = \{contents = <fun>\}*/
+\end{OCamlEx}
+\pause
+\begin{OCamlEx}
+f := (fun x -> x+1);;
+/*- : unit = ()*/
+\end{OCamlEx}
+\pause
+\begin{OCamlEx}
+f;;
+/*- : (int -> int) ref = \{contents = <fun>\}*/
+\end{OCamlEx}
+\pause
+\begin{OCamlEx}
+!f true;;
+/*Error: This expression has type bool but an expression was expected of type int*/
+\end{OCamlEx}
+\end{frame}
+
+\begin{frame}{Typi}
+TODO example impr
+\end{frame}
+
+
+\begin{frame}{Conclusion}
+
+Typi :
+\begin{itemize}
+\item 
+\end{itemize}
+
+Travaux futurs:
+\begin{itemize}
+\item Gestion du typage explicite
+
+\item Ajout de nouveaux traits (pattern matching, types somme ...)
+\end{itemize}
+
+\end{frame}
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{frame}{Bibliographie}
+
+  \begin{thebibliography}{}
+  \bibitem{DAOC} CHAILLOUX E., MANOURY P., PAGANO B., \emph{Développement
+    d'applications avec Objective Caml}, O'Reilly
+    , 2000
+
+
+\bibitem{dea_leroy} LEROY X., \emph{} (\url{http://pauillac.inria.fr/~xleroy/dea/typage/cours.pdf})
+
+\bibitem{remy} REMY D. (\url{http://gallium.inria.fr/~remy/isia/3/main.html})
+
+\bibitem{jsofocaml} js\_of\_ocaml, OCSIGEN (\url{http://ocsigen.com/js_of_ocaml})
+
+\bibitem{camlp4} CamlP4 \url{http://pauillac.inria.fr/camlp4/}
+  \end{thebibliography}
+\end{frame}
+
+
+
+
+
+
+
+\end{document}
+
