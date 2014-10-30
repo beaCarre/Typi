@@ -91,6 +91,27 @@ let string_of_quantified_type (Forall(gv,t)) =
       | Ref_type t -> res:= !res^ "(("^( string_rec t)^") ref)";!res
       in 
         string_rec t
+
+let rec string_of_ml_type = function
+  | Var_type _ -> "vartype"
+  | Const_type consttype ->  string_of_consttype consttype
+  | Pair_type (mlt1 , mlt2) -> 
+    ("Pair of "^(string_of_ml_type mlt1)^" * "^(string_of_ml_type mlt2))
+  | List_type mlt ->
+    ("List of "^(string_of_ml_type mlt))
+  | Fun_type (mlt1 , mlt2) -> 
+    ("Function of "^(string_of_ml_type mlt1)^" -> "^(string_of_ml_type mlt2))
+  | Ref_type mlt ->
+    ("Ref of "^(string_of_ml_type mlt))
+  
+
+let exception_to_string e =
+  match e with  
+  | Clash(a, b) ->  
+    ("clash type between "^(string_of_ml_type a)^" and "^
+	(string_of_ml_type b))
+  | Unbound_var v -> ("unbound variable "^v)
+
 (*********** Type printing ***************)
 
 let print_consttype ta = function 
@@ -127,7 +148,8 @@ let print_quantified_type ta (Forall(gv,t)) =
                             writeInTextArea ta " -> "; print_rec t2; writeInTextArea ta ")"
       | Ref_type t -> writeInTextArea ta "(("; print_rec t; writeInTextArea ta ") ref)"
       in 
-        print_rec t
+        print_rec t;
+        writeInTextArea ta "\n"
 
 
 (*************** Printing the current environement  *********************)

@@ -18,7 +18,7 @@ let go_type_baby in_console out_console tp =
 	  | Expr e ->  
 	    let ne,qt = type_check e true in 
 	    begin 
-	      writeInTextArea out_console "\n - ";
+	      writeInTextArea out_console "- ";
 	      writeInTextArea out_console ": ";
 	      print_quantified_type out_console qt; 
 	    end
@@ -28,22 +28,21 @@ let go_type_baby in_console out_console tp =
 	      else (Letin(b,s,e,Var s))
 	    in
 	    let ne,qt = type_check e true in
-	    writeInTextArea out_console "\n - ";
+	    writeInTextArea out_console "- ";
 	    writeInTextArea out_console (s^" : "); 
 	    add_initial_typing_env (s,qt);
 	    print_quantified_type out_console qt;
 	    print_current_env tp
 	  ) l_result
     with Failure "type_check" -> 
-      writeInTextArea out_console "\n - ";  
-      writeInTextArea out_console "Erreur de typage"
-    | Toplevel -> ()
+      writeInTextArea out_console "- Erreur de typage.\n"
+    | Toplevel -> writeInTextArea out_console "- Erreur de syntaxe.\n"
     | Failure s -> 
-      writeInTextArea out_console "\n - ";
-      writeInTextArea out_console ("Erreur " ^ s)
+      writeInTextArea out_console ("- Erreur " ^ s ^".\n")
     | Parsing.Parse_error -> 
-      writeInTextArea out_console "\n - "; 
-      writeInTextArea out_console "Erreur de syntaxe"
+      writeInTextArea out_console "- Erreur de syntaxe.\n"
+    | Type_error e -> 
+      writeInTextArea out_console ("- Erreur : "^(exception_to_string e)^".\n")
   end;
   out_console##scrollTop <- out_console##scrollHeight;
   in_console##value <- (Js.string "")

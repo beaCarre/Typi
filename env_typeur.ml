@@ -55,16 +55,12 @@ let type_check e g =
       et,qt
 
 
-
-
 exception Toplevel;;
 
 
 let eprintf a  = print_string a;;
 
-
-
-let parse_phrase parsing_fun lexing_fun lexbuf =
+let parse_phrase parsing_fun lexing_fun lexbuf outbuf=
   let rec skip () =
     try
       match lexing_fun lexbuf with
@@ -78,29 +74,27 @@ let parse_phrase parsing_fun lexing_fun lexbuf =
     || Parsing.is_current_lookahead SEMISEMI
     then () else skip() in
 
-
   try
     parsing_fun lexing_fun lexbuf
   with Parsing.Parse_error ->
          let pos1 = Lexing.lexeme_start lexbuf in
          let pos2 = Lexing.lexeme_end lexbuf in
          skip_maybe();
-         eprintf "Syntax error.\n";
+         output_string outbuf "Syntax error.\n";
          raise Toplevel
     | Error(errcode, pos1, pos2) ->
          let l = (pos1, pos2) in
          begin match errcode with
            Illegal_character ->
-             eprintf "Illegal character.\n" 
+             output_string outbuf "Illegal character.\n" 
          | Unterminated_comment ->
-             eprintf "Comment not terminated.\n" 
+             output_string outbuf "Comment not terminated.\n" 
          | Bad_char_constant ->
-             eprintf "Ill-formed character literal.\n"
+             output_string outbuf "Ill-formed character literal.\n"
          | Unterminated_string ->
-             eprintf "String literal not terminated.\n"
+             output_string outbuf "String literal not terminated.\n"
          end;
          skip();
          raise Toplevel
-;;
 
-let parse_impl_phrase = parse_phrase Asyn.start Alex.main;;
+let parse_impl_phrase outbuf = parse_phrase Asyn.start Alex.main outbuf

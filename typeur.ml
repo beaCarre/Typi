@@ -73,7 +73,8 @@ let type_instance st =
 
 type typing_error =
    Unbound_var of string
- | Clash of ml_type * ml_type 
+ | Clash of ml_type * ml_type
+
 
 exception Type_error of typing_error
 
